@@ -1,0 +1,848 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Road to £20k</title>
+<meta name="theme-color" content="#F2F3F8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0D1020" media="(prefers-color-scheme: dark)">
+<meta name="description" content="Pots, spending and progress toward a £20k savings goal.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one-column phone app — hero progress ruler, then stacked panels; bottom tab bar + floating "log spend" button */
+:root{
+  --bg:#F2F3F8; --surface:#FFFFFF; --sunk:#E8EAF2; --ink:#141A33; --muted:#5B6280; --line:#D9DCE8;
+  --save:#2E46C9; --fun:#D23F68; --train:#B57A0C; --current:#4A5578;
+  --good:#1B7F53; --warn:#B4511A; --on-accent:#FFFFFF;
+  --f-display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Instrument Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0D1020; --surface:#161A2D; --sunk:#1E2338; --ink:#EEF0F8; --muted:#9AA0BC; --line:#2A3049;
+  --save:#8496FF; --fun:#FF7FA0; --train:#EFB441; --current:#A9B2D6;
+  --good:#52C990; --warn:#F28C50; --on-accent:#0D1020; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0D1020; --surface:#161A2D; --sunk:#1E2338; --ink:#EEF0F8; --muted:#9AA0BC; --line:#2A3049;
+  --save:#8496FF; --fun:#FF7FA0; --train:#EFB441; --current:#A9B2D6;
+  --good:#52C990; --warn:#F28C50; --on-accent:#0D1020; color-scheme:dark}
+
+*{box-sizing:border-box}
+html{color-scheme:light}
+body{margin:0}
+[hidden]{display:none!important}
+img{max-width:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
+.app{max-width:560px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:max(14px, env(safe-area-inset-top, 0px)) 120px;display:flex;flex-direction:column;gap:14px}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h2{font-size:1.15rem;font-weight:700}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:var(--f-mono);font-size:.82rem}
+.label{font-family:var(--f-mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.muted{color:var(--muted)}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--save);outline-offset:2px}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font-family:var(--f-display);font-weight:800;font-size:1.05rem}
+.brand b{color:var(--save)}
+.sync{font-family:var(--f-mono);font-size:.68rem;color:var(--muted);display:flex;align-items:center;gap:6px}
+.sync i{width:7px;height:7px;border-radius:50%;background:var(--muted);display:inline-block}
+.sync.on i{background:var(--good)}
+
+.panel{background:var(--surface);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px}
+.flat{display:flex;flex-direction:column;gap:12px}
+
+/* hero */
+.hero{background:var(--surface);border-radius:var(--r);padding:18px 16px 16px;display:flex;flex-direction:column;gap:14px;border:1px solid var(--line)}
+.hero .big{font-family:var(--f-display);font-weight:800;font-size:clamp(2.6rem,12vw,3.4rem);line-height:1;letter-spacing:-.03em}
+.hero .big small{font-size:.38em;font-weight:500;color:var(--muted);letter-spacing:0;margin-left:6px}
+.ruler{position:relative;height:46px}
+.ruler .track{position:absolute;left:0;right:0;top:8px;height:14px;border-radius:7px;background:var(--sunk);overflow:hidden}
+.ruler .fill{height:100%;background:var(--save);border-radius:7px;transition:width .5s ease}
+.ruler .plan{position:absolute;top:2px;width:2px;height:26px;background:var(--ink);border-radius:1px}
+.ruler .tick{position:absolute;top:28px;transform:translateX(-50%);font-family:var(--f-mono);font-size:.66rem;color:var(--muted);white-space:nowrap}
+.ruler .tick:first-of-type{transform:none}
+.ruler .tick.end{transform:translateX(-100%)}
+.ruler .tick.hit{color:var(--save);font-weight:500}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.stat{display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat strong{font-family:var(--f-display);font-weight:700;font-size:1.05rem}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;font-size:.78rem;font-weight:600;width:max-content;max-width:100%}
+.pill.good{background:color-mix(in srgb,var(--good) 14%,transparent);color:var(--good)}
+.pill.warn{background:color-mix(in srgb,var(--warn) 14%,transparent);color:var(--warn)}
+.pill.neutral{background:var(--sunk);color:var(--muted)}
+
+/* payday banner */
+.payday{border-radius:var(--r);padding:14px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between;background:color-mix(in srgb,var(--save) 10%,var(--surface));border:1px solid color-mix(in srgb,var(--save) 30%,transparent);flex-wrap:wrap}
+.payday p{margin:0;min-width:0;flex:1 1 200px}
+.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:600;background:var(--save);color:var(--on-accent)}
+.btn.ghost{background:var(--sunk);color:var(--ink)}
+.btn.danger{background:var(--warn);color:var(--on-accent)}
+.btn.sm{padding:7px 11px;font-size:.85rem}
+.btn:disabled{opacity:.5;cursor:default}
+
+/* budget bars */
+.bars{display:flex;flex-direction:column;gap:12px}
+.bar-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:baseline}
+.bar-row .meter{grid-column:1/-1;height:8px;border-radius:4px;background:var(--sunk);overflow:hidden}
+.bar-row .meter span{display:block;height:100%;border-radius:4px}
+.bar-row .amt{font-variant-numeric:tabular-nums;font-size:.88rem}
+.bar-row .amt.over{color:var(--warn);font-weight:600}
+
+/* pots */
+.pots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.pot{background:var(--surface);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:4px;border-top:4px solid var(--c);min-width:0}
+.pot strong{font-family:var(--f-display);font-size:1.3rem;font-weight:700;font-variant-numeric:tabular-nums}
+.pot .why{font-size:.8rem;color:var(--muted)}
+.pot-full{background:var(--surface);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:10px;border-left:5px solid var(--c)}
+.pot-full .head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.pot-full strong{font-family:var(--f-display);font-size:1.6rem;font-weight:800;font-variant-numeric:tabular-nums}
+.pot-full .acts{display:flex;gap:8px;flex-wrap:wrap}
+.runway{display:flex;gap:4px}
+.runway span{flex:1;height:8px;border-radius:3px;background:var(--sunk)}
+.runway span.on{background:var(--train)}
+
+/* ledger */
+.ledger{display:flex;flex-direction:column}
+.day{font-family:var(--f-mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:12px 0 4px}
+.tx{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);background:none;border-left:0;border-right:0;border-top:0;text-align:left;width:100%}
+.tx .dot{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.tx .what{min-width:0}
+.tx .what div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx .what small{color:var(--muted);font-size:.78rem}
+.tx .val{font-variant-numeric:tabular-nums;font-weight:600;font-family:var(--f-mono);font-size:.88rem}
+.tx .val.in{color:var(--good)}
+.tx-confirm{display:flex;gap:8px;justify-content:flex-end;padding:8px 0 10px;border-bottom:1px solid var(--line);align-items:center;flex-wrap:wrap}
+.empty{padding:22px 4px;text-align:center;color:var(--muted);display:flex;flex-direction:column;gap:10px;align-items:center}
+
+.monthnav{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.monthnav button{background:var(--sunk);border:0;border-radius:10px;width:40px;height:40px;font-size:1.1rem}
+.monthnav h2{font-size:1.25rem}
+
+/* plan */
+.phase{display:flex;flex-direction:column;gap:10px;padding:14px 0;border-top:1px solid var(--line)}
+.phase:first-child{border-top:0;padding-top:0}
+.phase-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field input,.field select{width:100%;min-width:0;padding:10px 11px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font-variant-numeric:tabular-nums;font-size:16px}
+.buffer{font-size:.85rem}
+.buffer.neg{color:var(--warn);font-weight:600}
+.miles{display:flex;flex-direction:column}
+.mile{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.mile:last-child{border-bottom:0}
+.mile .done{color:var(--good);font-weight:600}
+.chart-wrap{overflow-x:auto}
+.chart-wrap svg{display:block;width:100%;height:auto;min-width:300px}
+.legend{display:flex;gap:16px;font-size:.8rem;color:var(--muted);flex-wrap:wrap}
+.legend span{display:inline-flex;gap:6px;align-items:center}
+.legend i{width:16px;height:3px;background:var(--save);display:inline-block;border-radius:2px}
+.legend i.dash{background:repeating-linear-gradient(90deg,var(--muted) 0 4px,transparent 4px 7px)}
+
+/* nav + fab */
+.nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom,0px);padding-left:max(8px, env(safe-area-inset-left, 0px));padding-right:max(8px, env(safe-area-inset-right, 0px));z-index:5}
+.nav-in{display:grid;grid-template-columns:repeat(4,1fr);width:100%;max-width:560px}
+.nav button{background:none;border:0;padding:12px 4px 13px;font-size:.8rem;font-weight:600;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:4px}
+.nav button svg{width:22px;height:22px}
+.nav button[aria-current="page"]{color:var(--save)}
+.fab{position:fixed;right:max(18px, calc(env(safe-area-inset-right, 0px) + 18px));bottom:calc(env(safe-area-inset-bottom, 0px) + 78px);z-index:6;background:var(--ink);color:var(--bg);border:0;border-radius:999px;padding:14px 20px;font-weight:700;font-size:.95rem;display:flex;gap:8px;align-items:center;box-shadow:0 8px 24px rgba(10,14,30,.28)}
+
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgba(8,10,22,.45);z-index:10;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:100%;max-width:560px;border-radius:20px 20px 0 0;padding:18px max(16px, env(safe-area-inset-left, 0px)) calc(env(safe-area-inset-bottom, 0px) + 18px) max(16px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:14px;max-height:92%;overflow-y:auto}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.x{background:var(--sunk);border:0;border-radius:50%;width:34px;height:34px;font-size:1.1rem;line-height:1}
+.amount-in{display:flex;align-items:center;gap:4px;border-bottom:2px solid var(--line);padding-bottom:4px}
+.amount-in span{font-family:var(--f-display);font-size:2.2rem;font-weight:700;color:var(--muted)}
+.amount-in input{border:0;background:none;font-family:var(--f-display);font-size:2.6rem;font-weight:800;width:100%;min-width:0;padding:0;outline:none;font-variant-numeric:tabular-nums}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1.5px solid var(--line);background:var(--bg);border-radius:999px;padding:8px 13px;font-size:.88rem;font-weight:600;display:flex;align-items:center;gap:7px}
+.chip i{width:9px;height:9px;border-radius:50%;background:var(--c)}
+.chip[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+.note{font-size:.84rem;color:var(--muted);margin:0}
+.err{color:var(--warn);font-size:.85rem;font-weight:600;margin:0}
+.row-end{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom, 0px) + 140px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:20;font-size:.9rem;max-width:calc(100% - 32px)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="top">
+    <div class="brand">Road to <b>£20k</b></div>
+    <div class="sync" id="sync"><i></i><span>Saved on this phone</span></div>
+  </div>
+  <main id="view" class="flat"></main>
+</div>
+
+<button class="fab" id="fab" data-action="open-spend" aria-label="Log spending">
+  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+  Log spend
+</button>
+
+<nav class="nav" aria-label="Sections"><div class="nav-in">
+  <button data-tab="home" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 18h16M6 18V11M11 18V7M16 18v-5"/></svg>Home</button>
+  <button data-tab="spend"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 4h14v16l-3-2-2 2-2-2-2 2-2-2-3 2z"/><path d="M9 9h6M9 13h4"/></svg>Spending</button>
+  <button data-tab="pots"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 9h14l-1.5 10h-11z"/><path d="M8 9V6a4 4 0 0 1 8 0v3"/></svg>Pots</button>
+  <button data-tab="plan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 19l5-6 4 3 7-9"/><path d="M15 7h5v5"/></svg>Plan</button>
+</div></nav>
+
+<div id="layer"></div>
+<input type="file" id="import-file" accept=".json,application/json" hidden>
+
+<script>
+/* ---------- defaults: blank plan (your figures arrive with your backup, never in this public code) ---------- */
+function thisMonth(){ const d = new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"); }
+const DEFAULTS = {
+  goal: 20000,
+  startMonth: thisMonth(),
+  cardFreeDate: "",
+  budgets: { rent: 0, essentials: 0 },
+  phases: [ { from: thisMonth(), label: "Current pay", takeHome: 0, savings: 0, fun: 0, train: 0 } ]
+};
+const POTS = {
+  current: { name: "Current account", c: "--current", why: "Rent, food & essentials, buffer" },
+  savings: { name: "£20k savings",    c: "--save",    why: "Hands off. The goal." },
+  fun:     { name: "Fun fund",        c: "--fun",     why: "Spend it guilt-free. Rolls over." },
+  train:   { name: "Train pot",       c: "--train",   why: "Advance tickets, booked ~8 weeks out" }
+};
+const CATS = {
+  rent:       { name: "Rent",              c: "--current", from: "current" },
+  trains:     { name: "Trains",            c: "--train",   from: "train" },
+  essentials: { name: "Food & essentials", c: "--current", from: "current" },
+  fun:        { name: "Fun",               c: "--fun",     from: "fun" },
+  oneoff:     { name: "One-off",           c: "--muted",   from: "current" }
+};
+const LS_KEY = "road20k.app.v1";
+
+/* ---------- state ---------- */
+const S = { tab: "home", month: null, txs: [], settings: clone(DEFAULTS), meta: { configured: false, lastBackup: null }, confirmDel: null, sheet: null, importing: null };
+
+
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
+function isoOf(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function todayISO(){ return isoOf(new Date()); }
+function tomorrowISO(){ const d = new Date(); d.setDate(d.getDate()+1); return isoOf(d); }
+/* Expected money: logged ahead of time, only counts once you confirm it arrived. */
+function isPending(t){
+  if (t.kind !== "income" || t.payday) return false;
+  if (t.expected !== undefined) return t.expected === true;
+  return !!t.created && isoOf(new Date(t.created)) < t.date;
+}
+function dueList(){ const today = todayISO(); return S.txs.filter(t => isPending(t) && t.date <= today); }
+function updateTx(id, patch){
+  const i = S.txs.findIndex(t => t.id === id); if (i < 0) return;
+  const t = Object.assign({}, S.txs[i], patch); S.txs[i] = t; sortTx();
+  saveLocal(); render();
+}
+function ym(iso){ return iso.slice(0,7); }
+function addM(m, n){ let [y, mo] = m.split("-").map(Number); mo += n; y += Math.floor((mo-1)/12); mo = ((mo-1)%12+12)%12+1; return y+"-"+String(mo).padStart(2,"0"); }
+function cmpM(a,b){ return a < b ? -1 : a > b ? 1 : 0; }
+const MN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MNL = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+function fmtM(m, long){ const [y,mo] = m.split("-").map(Number); return (long?MNL:MN)[mo-1]+" "+y; }
+function fmtDay(iso){ const d = new Date(iso+"T12:00:00"); return d.toLocaleDateString("en-GB",{weekday:"short", day:"numeric", month:"short"}); }
+function money(n, opts){ const neg = n < 0; n = Math.abs(n); const pence = Math.round(n*100)%100 !== 0;
+  const s = n.toLocaleString("en-GB",{minimumFractionDigits: pence?2:0, maximumFractionDigits:2});
+  return (neg?"−":"")+"£"+s; }
+function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function parseAmt(v){ const n = parseFloat(String(v).replace(/[£,\s]/g,"")); return isFinite(n) ? Math.round(n*100)/100 : NaN; }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+
+function settings(){ return S.settings; }
+function phaseFor(m){ const ps = [...settings().phases].sort((a,b)=>cmpM(a.from,b.from)); let p = ps[0]; for (const x of ps) if (cmpM(x.from, m) <= 0) p = x; return p; }
+function bufferOf(p){ const b = settings().budgets; return p.takeHome - b.rent - b.essentials - p.savings - p.fun - p.train; }
+
+/* ---------- money maths ---------- */
+function balances(upto){
+  const b = { current:0, savings:0, fun:0, train:0 };
+  for (const t of S.txs){
+    if (t.date > (upto || todayISO()) || isPending(t)) continue;
+    if (t.kind === "income" || t.kind === "adjust") b[t.to] += t.amount;
+    else if (t.kind === "move"){ b[t.from] -= t.amount; b[t.to] += t.amount; }
+    else if (t.kind === "spend") b[t.from] -= t.amount;
+  }
+  for (const k in b) b[k] = Math.round(b[k]*100)/100;
+  return b;
+}
+function paydayDone(m){ return S.txs.some(t => t.kind === "income" && (t.payday || t.note === "Pay") && ym(t.date) === m); }
+function spentIn(m){
+  const by = { rent:0, trains:0, essentials:0, fun:0, oneoff:0 };
+  for (const t of S.txs) if (t.kind === "spend" && ym(t.date) === m) by[t.cat] = (by[t.cat]||0) + t.amount;
+  return by;
+}
+/* planned cumulative savings after payday of month m */
+function plannedBy(m){
+  const s = settings(); let tot = 0, cur = s.startMonth;
+  while (cmpM(cur, m) <= 0){ tot += phaseFor(cur).savings; cur = addM(cur,1); if (tot > 1e7) break; }
+  return tot;
+}
+function plannedHit(target){
+  const s = settings(); let tot = 0, cur = s.startMonth;
+  for (let i=0;i<240;i++){ tot += phaseFor(cur).savings; if (tot >= target) return cur; cur = addM(cur,1); }
+  return null;
+}
+function projectedHit(){
+  const s = settings(); const now = ym(todayISO()); let bal = balances().savings;
+  if (bal >= s.goal) return { month: now, done: true };
+  let cur = paydayDone(now) ? addM(now,1) : now;
+  if (cmpM(cur, s.startMonth) < 0) cur = s.startMonth;
+  for (let i=0;i<240;i++){ bal += phaseFor(cur).savings; if (bal >= s.goal) return { month: cur }; cur = addM(cur,1); }
+  return null;
+}
+function planNow(){
+  const s = settings(); const now = ym(todayISO());
+  const m = paydayDone(now) ? now : addM(now,-1);
+  return cmpM(m, s.startMonth) < 0 ? 0 : plannedBy(m);
+}
+
+/* ---------- storage ---------- */
+/* All data lives on this phone (localStorage), so it works with no signal. Back it up from the Plan tab. */
+function saveLocal(){
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ txs: S.txs, settings: S.settings, meta: S.meta })); }
+  catch(e){ toast("Couldn't save on this phone. Your storage may be full."); }
+}
+function loadLocal(){
+  try { const raw = localStorage.getItem(LS_KEY); if (!raw) return;
+    const d = JSON.parse(raw); if (Array.isArray(d.txs)) S.txs = d.txs; if (d.settings) S.settings = Object.assign(clone(DEFAULTS), d.settings);
+    if (d.meta) S.meta = Object.assign(S.meta, d.meta);
+  } catch(e){}
+}
+function writeTx(tx){ S.txs.push(tx); sortTx(); saveLocal(); render(); return Promise.resolve(); }
+function deleteTx(id){ S.txs = S.txs.filter(t => t.id !== id); saveLocal(); render(); }
+function writeSettings(){ S.meta.configured = true; saveLocal(); render(); }
+function sortTx(){ S.txs.sort((a,b)=> a.date === b.date ? (b.created||0)-(a.created||0) : (a.date < b.date ? 1 : -1)); }
+function updateSync(){
+  const el = document.getElementById("sync"), offline = navigator.onLine === false;
+  el.classList.toggle("on", !offline);
+  el.querySelector("span").textContent = offline ? "Offline · saved on this phone" : "Saved on this phone";
+}
+window.addEventListener("online", updateSync);
+window.addEventListener("offline", updateSync);
+
+/* ---------- views ---------- */
+function render(){
+  document.querySelectorAll(".nav button").forEach(b => b.setAttribute("aria-current", b.dataset.tab === S.tab ? "page" : "false"));
+  const v = document.getElementById("view");
+  v.innerHTML = S.tab === "home" ? viewHome() : S.tab === "spend" ? viewSpend() : S.tab === "pots" ? viewPots() : viewPlan();
+  renderSheet();
+}
+
+function rulerHTML(saved){
+  const g = settings().goal, pct = Math.min(100, saved/g*100), plan = Math.min(100, planNow()/g*100);
+  const ticks = [0, .25, .5, .75, 1].map(f => {
+    const v = g*f, cls = f===1 ? "end" : "", hit = saved >= v && f>0 ? " hit" : "";
+    return `<span class="tick ${cls}${hit}" style="left:${f*100}%">${f===0 ? "£0" : "£"+(v/1000)+"k"}</span>`;
+  }).join("");
+  return `<div class="ruler" role="img" aria-label="${money(saved)} saved of ${money(g)}">
+    <div class="track"><div class="fill" style="width:${pct}%"></div></div>
+    ${planNow() > 0 ? `<div class="plan" style="left:calc(${plan}% - 1px)" title="Where the plan says you should be"></div>` : ""}
+    ${ticks}</div>`;
+}
+
+function statusPill(saved){
+  const target = planNow();
+  if (target === 0) return `<span class="pill neutral">Plan starts ${fmtM(settings().startMonth, true)}</span>`;
+  const d = Math.round(saved - target);
+  if (d >= 0) return `<span class="pill good">${d === 0 ? "Exactly on plan" : money(d)+" ahead of plan"}</span>`;
+  return `<span class="pill warn">${money(-d)} behind plan</span>`;
+}
+
+function cardFree(){
+  const d = settings().cardFreeDate; if (!d) return "";
+  const days = Math.round((new Date(todayISO()+"T12:00:00") - new Date(d+"T12:00:00"))/864e5);
+  return days < 0 ? { v: String(-days), l: "Card cleared in" } : { v: String(days), l: "Card-free for" };
+}
+
+function viewHome(){
+  const b = balances(), s = settings(), now = ym(todayISO()), proj = projectedHit(), cf = cardFree();
+  const done = paydayDone(now), ph = phaseFor(now);
+  const spent = spentIn(now);
+  const rows = [
+    { k:"rent", budget: s.budgets.rent },
+    { k:"trains", budget: ph.train },
+    { k:"essentials", budget: s.budgets.essentials },
+    { k:"fun", budget: Math.max(ph.fun, b.fun + spent.fun), sub: "pot incl. rollover" }
+  ];
+  const recent = S.txs.slice(0,5);
+  if (!S.meta.configured && !S.txs.length) return welcomeHTML();
+  return `
+  ${backupNudge()}
+  <section class="hero" aria-label="Savings goal">
+    <div class="label">Saved toward ${money(s.goal)}</div>
+    <div class="big num">${money(b.savings)}<small>${Math.floor(b.savings/s.goal*100)}%</small></div>
+    ${rulerHTML(b.savings)}
+    ${statusPill(b.savings)}
+    <div class="stats">
+      <div class="stat"><span class="label">Goal date</span><strong>${proj ? (proj.done ? "Done!" : fmtM(proj.month)) : "—"}</strong></div>
+      <div class="stat"><span class="label">Saving / mo</span><strong class="num">${money(ph.savings)}</strong></div>
+      <div class="stat"><span class="label">${cf ? cf.l : ""}</span><strong class="num">${cf ? cf.v+" days" : "—"}</strong></div>
+    </div>
+  </section>
+
+  ${dueHTML()}
+  ${done ? "" : `<div class="payday">
+    <p><strong>${fmtM(now, true)} payday</strong><br><span class="muted">Move ${money(ph.savings)} to savings, ${money(ph.fun)} to fun, ${money(ph.train)} to trains.</span></p>
+    <button class="btn" data-action="open-payday">Do payday</button>
+  </div>`}
+
+  <section class="panel" aria-label="This month">
+    <div class="phase-head"><h2>${fmtM(now, true)}</h2><span class="label">Spent vs budget</span></div>
+    <div class="bars">${rows.map(r => barRow(r.k, spent[r.k], r.budget, r.sub)).join("")}
+      ${spent.oneoff ? `<div class="bar-row"><span>One-off</span><span class="amt">${money(spent.oneoff)}</span></div>` : ""}
+    </div>
+  </section>
+
+  <section class="flat" aria-label="Pots">
+    <div class="phase-head"><h2>Pots</h2><div class="acts" style="display:flex;gap:8px"><button class="btn ghost sm" data-action="open-income" data-pot="current">Money in</button><button class="btn ghost sm" data-action="open-move">Move money</button></div></div>
+    <div class="pots">${["current","savings","fun","train"].map(k => `
+      <div class="pot" style="--c:var(${POTS[k].c})"><span class="label">${POTS[k].name}</span><strong>${money(b[k])}</strong></div>`).join("")}</div>
+  </section>
+
+  <section class="panel" aria-label="Recent">
+    <div class="phase-head"><h2>Recent</h2>${S.txs.length ? `<button class="btn ghost sm" data-tab-go="spend">See all</button>` : ""}</div>
+    ${recent.length ? `<div class="ledger">${recent.map(txRow).join("")}</div>` : emptyLedger()}
+  </section>`;
+}
+
+function dueHTML(){
+  return dueList().map(t => {
+    const from = t.note ? esc(t.note) : "Expected payment", m = S.dueMode && S.dueMode.id === t.id ? S.dueMode.kind : null;
+    let acts;
+    if (m === "due-amount") acts = `<div class="field" style="flex:1 1 140px"><label class="label" for="due-amt">Amount that arrived (£)</label><input id="due-amt" inputmode="decimal" placeholder="${t.amount}"></div>
+      <p class="err" id="due-err" hidden style="flex-basis:100%"></p>
+      <button class="btn ghost sm" data-action="due-back">Back</button><button class="btn sm" data-action="due-save-amount" data-id="${esc(t.id)}">Add it</button>`;
+    else if (m === "due-drop") acts = `<span class="muted" style="font-size:.88rem;flex:1 1 160px">Remove this expected payment? Your balance won't change.</span>
+      <button class="btn ghost sm" data-action="due-back">Keep it</button><button class="btn danger sm" data-action="due-remove" data-id="${esc(t.id)}">Remove</button>`;
+    else acts = `<button class="btn sm" data-action="due-yes" data-id="${esc(t.id)}">Yes, it's in</button>
+      <button class="btn ghost sm" data-action="due-amount" data-id="${esc(t.id)}">A different amount</button>
+      <button class="btn ghost sm" data-action="due-later" data-id="${esc(t.id)}">Not yet</button>
+      <button class="btn ghost sm" data-action="due-drop" data-id="${esc(t.id)}">It's not coming</button>`;
+    return `<div class="payday" style="border-color:color-mix(in srgb,var(--good) 40%,transparent);background:color-mix(in srgb,var(--good) 9%,var(--surface))">
+      <p><strong>Has the ${money(t.amount)} you were expecting arrived?</strong><br><span class="muted">${from} · due ${fmtDay(t.date)} · into ${POTS[t.to].name}</span></p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;flex-basis:100%">${acts}</div></div>`;
+  }).join("");
+}
+
+function barRow(k, spent, budget, sub){
+  const c = CATS[k], pct = budget ? Math.min(100, spent/budget*100) : 0, over = spent > budget;
+  return `<div class="bar-row"><span>${c.name}${sub ? ` <small class="muted">· ${sub}</small>` : ""}</span>
+    <span class="amt ${over?"over":""}">${money(spent)} <span class="muted">/ ${money(budget)}</span></span>
+    <div class="meter"><span style="width:${pct}%;background:var(${over ? "--warn" : c.c})"></span></div></div>`;
+}
+
+function emptyLedger(){
+  return `<div class="empty"><div>Nothing logged yet. Start with payday, then log what you spend as you go.</div>
+    <button class="btn sm" data-action="open-spend">Log your first spend</button></div>`;
+}
+
+function txRow(t){
+  let c, title, sub, val, cls = "";
+  if (t.kind === "spend"){ c = CATS[t.cat]?.c || "--muted"; title = t.note || CATS[t.cat]?.name || "Spend"; sub = (t.note ? CATS[t.cat]?.name+" · " : "")+"from "+POTS[t.from].name; val = "−"+money(t.amount).replace("−",""); }
+  else if (t.kind === "income"){ c = "--good"; title = t.note || "Money in"; sub = "into "+POTS[t.to].name; val = "+"+money(t.amount); cls = "in"; }
+  else if (t.kind === "move"){ c = POTS[t.to].c; title = t.note || "Moved to "+POTS[t.to].name; sub = POTS[t.from].name+" → "+POTS[t.to].name; val = money(t.amount); }
+  else { c = POTS[t.to].c; title = "Balance set"; sub = POTS[t.to].name; val = (t.amount>=0?"+":"")+money(t.amount); }
+  if (isPending(t)) sub = (t.date > todayISO() ? "Expected " + fmtDay(t.date) : "Due · confirm on Home") + " · " + sub;
+  else if (t.date > todayISO()) sub = "Scheduled " + fmtDay(t.date) + " · " + sub;
+  const row = `<button class="tx" data-action="tx" data-id="${esc(t.id)}" aria-label="${esc(title)}, ${esc(val)}. Tap to delete">
+    <span class="dot" style="--c:var(${c})"></span>
+    <span class="what"><div>${esc(title)}</div><small>${esc(sub)}</small></span>
+    <span class="val ${cls}">${esc(val)}</span></button>`;
+  if (S.confirmDel === t.id) return row + `<div class="tx-confirm"><span class="muted" style="font-size:.85rem">Delete this entry?</span>
+    <button class="btn ghost sm" data-action="tx-keep">Keep</button><button class="btn danger sm" data-action="tx-del" data-id="${esc(t.id)}">Delete</button></div>`;
+  return row;
+}
+
+function viewSpend(){
+  const m = S.month || ym(todayISO()), spent = spentIn(m), s = settings(), ph = phaseFor(m);
+  const list = S.txs.filter(t => ym(t.date) === m);
+  const total = Object.values(spent).reduce((a,b)=>a+b,0);
+  let html = "", lastDay = "";
+  for (const t of list){ if (t.date !== lastDay){ html += `<div class="day">${fmtDay(t.date)}</div>`; lastDay = t.date; } html += txRow(t); }
+  return `
+  <div class="monthnav"><button data-action="m-prev" aria-label="Previous month">‹</button><h2>${fmtM(m, true)}</h2><button data-action="m-next" aria-label="Next month">›</button></div>
+  <section class="panel">
+    <div class="phase-head"><span class="label">Total spent</span><strong class="num" style="font-family:var(--f-display);font-size:1.4rem">${money(total)}</strong></div>
+    <div class="bars">
+      ${barRow("rent", spent.rent, s.budgets.rent)}
+      ${barRow("trains", spent.trains, ph.train)}
+      ${barRow("essentials", spent.essentials, s.budgets.essentials)}
+      ${barRow("fun", spent.fun, ph.fun, "monthly top-up")}
+      ${spent.oneoff ? `<div class="bar-row"><span>One-off</span><span class="amt">${money(spent.oneoff)}</span></div>` : ""}
+    </div>
+  </section>
+  <section class="panel"><h2>Entries</h2>
+    ${list.length ? `<div class="ledger">${html}</div><p class="note">Tap an entry to delete it.</p>` : `<div class="empty">Nothing logged in ${fmtM(m, true)}.</div>`}
+  </section>`;
+}
+
+function viewPots(){
+  const b = balances(), now = ym(todayISO()), ph = phaseFor(now), s = settings();
+  const runway = ph.train ? b.train/ph.train : 0;
+  const cells = Array.from({length:3}, (_,i) => `<span class="${runway >= i+1 ? "on" : ""}" style="${runway > i && runway < i+1 ? `background:linear-gradient(90deg,var(--train) ${(runway-i)*100}%,var(--sunk) 0)` : ""}"></span>`).join("");
+  const extra = {
+    current: `<p class="note">Covers rent ${money(s.budgets.rent)}, food & essentials ${money(s.budgets.essentials)}, and a ${money(bufferOf(ph))} buffer each month.</p>`,
+    savings: `<p class="note">${money(Math.max(0, s.goal - b.savings))} to go. Keep the first £1,000–£2,000 easy to reach as your emergency cushion.</p>`,
+    fun: `<p class="note">Topped up ${money(ph.fun)} each payday. Whatever you don't spend stays here for a trip.</p>`,
+    train: `<div class="runway" aria-hidden="true">${cells}</div>
+      <p class="note">Covers about <strong>${runway.toFixed(1)} months</strong> of tickets at ${money(ph.train)}/month. Getting one month ahead lets you book 8 weeks out without the card.</p>`
+  };
+  return ["savings","fun","train","current"].map(k => `
+    <section class="pot-full" style="--c:var(${POTS[k].c})">
+      <div class="head"><h2>${POTS[k].name}</h2><strong>${money(b[k])}</strong></div>
+      <span class="muted" style="font-size:.88rem">${POTS[k].why}</span>
+      ${extra[k]}
+      <div class="acts">
+        <button class="btn ghost sm" data-action="open-income" data-pot="${k}">Add money</button>
+        <button class="btn ghost sm" data-action="open-move" data-from="${k}">Move out</button>
+        <button class="btn ghost sm" data-action="open-set" data-pot="${k}">Set balance</button>
+      </div>
+    </section>`).join("");
+}
+
+function viewPlan(){
+  const s = settings(), b = balances();
+  const ms = [0.25,0.5,0.75,1].map(f => { const v = s.goal*f, m = plannedHit(v); return { v, m, done: b.savings >= v }; });
+  const proj = projectedHit();
+  return `
+  <section class="panel">
+    <h2>Milestones</h2>
+    <div class="miles">${ms.map(x => `<div class="mile"><span>${money(x.v)}</span><span>${x.done ? `<span class="done">Reached</span>` : (x.m ? "Planned "+fmtM(x.m) : "—")}</span></div>`).join("")}</div>
+    <p class="note">At your current balance and pace you'll reach ${money(s.goal)} in <strong>${proj ? fmtM(proj.month, true) : "—"}</strong>.</p>
+  </section>
+  <section class="panel"><h2>Plan vs actual</h2>${chartSVG()}
+    <div class="legend"><span><i class="dash"></i>Plan</span><span><i></i>Your savings pot</span></div></section>
+  <section class="panel">
+    <h2>Monthly plan</h2>
+    <p class="note">Edit these when a payslip changes. Pay-rise splits are a starting point: check your first payslip after each rise.</p>
+    <div class="grid2">
+      <div class="field"><label class="label" for="g-goal">Goal (£)</label><input id="g-goal" inputmode="decimal" value="${s.goal}"></div>
+      <div class="field"><label class="label" for="g-start">Plan starts</label><input id="g-start" type="month" value="${s.startMonth}"></div>
+      <div class="field"><label class="label" for="g-rent">Rent (£)</label><input id="g-rent" inputmode="decimal" value="${s.budgets.rent}"></div>
+      <div class="field"><label class="label" for="g-ess">Food & essentials (£)</label><input id="g-ess" inputmode="decimal" value="${s.budgets.essentials}"></div>
+      <div class="field" style="grid-column:1/-1"><label class="label" for="g-card">Credit card cleared on (optional)</label><input id="g-card" type="date" value="${s.cardFreeDate||""}"></div>
+    </div>
+    <div>${s.phases.map((p,i) => phaseEditor(p,i)).join("")}</div>
+    <p class="err" id="plan-err" hidden></p>
+    <div class="row-end"><button class="btn ghost" data-action="phase-add">Add a pay rise</button><button class="btn" data-action="plan-save">Save plan</button></div>
+  </section>
+  ${dataHTML()}`;
+}
+
+function phaseEditor(p, i){
+  const buf = bufferOf(p);
+  return `<div class="phase">
+    <div class="phase-head"><h3>${esc(p.label)}</h3><span class="buffer num ${buf<0?"neg":""}">Buffer ${money(buf)}</span></div>
+    <div class="grid2">
+      <div class="field" style="grid-column:1/-1"><label class="label" for="p${i}-lb">Name</label><input id="p${i}-lb" value="${esc(p.label)}" maxlength="40"></div>
+      <div class="field"><label class="label" for="p${i}-from">From</label><input id="p${i}-from" type="month" value="${p.from}"></div>
+      <div class="field"><label class="label" for="p${i}-th">Take-home (£)</label><input id="p${i}-th" inputmode="decimal" value="${p.takeHome}"></div>
+      <div class="field"><label class="label" for="p${i}-sv">Savings (£)</label><input id="p${i}-sv" inputmode="decimal" value="${p.savings}"></div>
+      <div class="field"><label class="label" for="p${i}-fn">Fun (£)</label><input id="p${i}-fn" inputmode="decimal" value="${p.fun}"></div>
+      <div class="field"><label class="label" for="p${i}-tr">Trains (£)</label><input id="p${i}-tr" inputmode="decimal" value="${p.train}"></div>
+    </div>${i > 0 ? `<div><button class="btn ghost sm" data-action="phase-del" data-i="${i}">Remove this stage</button></div>` : ""}</div>`;
+}
+
+function chartSVG(){
+  const s = settings(), W = 340, H = 190, L = 40, R = 12, T = 10, B = 26;
+  const end = plannedHit(s.goal) || addM(s.startMonth, 24);
+  const months = []; for (let m = addM(s.startMonth,-1); cmpM(m, end) <= 0 && months.length < 60; m = addM(m,1)) months.push(m);
+  const n = months.length - 1, x = i => L + (W-L-R)*i/n, y = v => T + (H-T-B)*(1 - Math.min(v, s.goal)/s.goal);
+  const planPts = months.map((m,i) => `${x(i).toFixed(1)},${y(i===0?0:plannedBy(m)).toFixed(1)}`).join(" ");
+  const now = ym(todayISO()); const act = [];
+  months.forEach((m,i) => { if (cmpM(m, now) <= 0){ const [yy,mo] = m.split("-").map(Number); const last = new Date(yy, mo, 0).getDate(); act.push([x(i), y(Math.max(0, balances(m+"-"+String(last).padStart(2,"0")).savings))]); } });
+  const grid = [0, .25, .5, .75, 1].map(f => `<line x1="${L}" x2="${W-R}" y1="${y(s.goal*f)}" y2="${y(s.goal*f)}" stroke="var(--line)" stroke-width="1"/>
+    <text x="${L-6}" y="${y(s.goal*f)+4}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="IBM Plex Mono, monospace">${f===0?"£0":"£"+(s.goal*f/1000)+"k"}</text>`).join("");
+  const labelIdx = [0, ...months.map((m,i)=> m.endsWith("-02") ? i : -1).filter(i=>i>0), n].filter((v,i,a)=>a.indexOf(v)===i);
+  const xl = labelIdx.filter((v,i,a) => i===0 || x(v) - x(a[i-1]) > 58).map(i => `<text x="${x(i)}" y="${H-8}" text-anchor="${i===0?"start":i===n?"end":"middle"}" font-size="10" fill="var(--muted)" font-family="IBM Plex Mono, monospace">${MN[+months[i].slice(5)-1]} ${months[i].slice(2,4)}</text>`).join("");
+  const actLine = act.length > 1 ? `<polyline points="${act.map(p=>p.map(v=>v.toFixed(1)).join(",")).join(" ")}" fill="none" stroke="var(--save)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>` : "";
+  const dot = act.length ? `<circle cx="${act[act.length-1][0].toFixed(1)}" cy="${act[act.length-1][1].toFixed(1)}" r="5" fill="var(--save)" stroke="var(--surface)" stroke-width="2"/>` : "";
+  return `<div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Planned savings path compared with your actual savings">
+    ${grid}${xl}
+    <polyline points="${planPts}" fill="none" stroke="var(--muted)" stroke-width="2" stroke-dasharray="5 4"/>
+    ${actLine}${dot}</svg></div>`;
+}
+
+/* ---------- sheets ---------- */
+function openSheet(kind, data){ S.sheet = Object.assign({ kind }, data||{}); renderSheet(); setTimeout(()=>{ const f = document.querySelector("#layer [autofocus]"); if (f) f.focus(); }, 30); }
+function closeSheet(){ S.sheet = null; renderSheet(); }
+function potOptions(sel, exclude){ return Object.keys(POTS).filter(k=>k!==exclude).map(k => `<option value="${k}" ${k===sel?"selected":""}>${POTS[k].name}</option>`).join(""); }
+
+function renderSheet(){
+  const L = document.getElementById("layer"), sh = S.sheet;
+  if (!sh){ L.innerHTML = ""; return; }
+  if (L.dataset.kind === sh.kind && L.innerHTML && !sh.rerender) return;
+  sh.rerender = false; L.dataset.kind = sh.kind;
+  let body = "";
+  if (sh.kind === "spend"){
+    const cat = sh.cat || "essentials";
+    body = `<div class="sheet-head"><h2>Log spending</h2><button class="x" data-action="close" aria-label="Close">×</button></div>
+      <div class="amount-in"><span>£</span><input id="s-amt" inputmode="decimal" placeholder="0" autofocus aria-label="Amount" value="${esc(sh.amt||"")}"></div>
+      <div class="chips" role="group" aria-label="Category">${Object.keys(CATS).map(k => `<button class="chip" style="--c:var(${CATS[k].c})" data-action="cat" data-cat="${k}" aria-pressed="${k===cat}"><i></i>${CATS[k].name}</button>`).join("")}</div>
+      <div class="grid2">
+        <div class="field"><label class="label" for="s-from">Paid from</label><select id="s-from">${potOptions(sh.from || CATS[cat].from)}</select></div>
+        <div class="field"><label class="label" for="s-date">Date</label><input id="s-date" type="date" value="${esc(sh.date||todayISO())}"></div>
+      </div>
+      <div class="field"><label class="label" for="s-note">Note (optional)</label><input id="s-note" placeholder="${cat==="trains" ? "e.g. Advance return, travel 14 Jan" : "e.g. Tesco shop"}" value="${esc(sh.note||"")}"></div>
+      <p class="err" id="s-err" hidden></p>
+      <button class="btn" data-action="save-spend">Save</button>`;
+  } else if (sh.kind === "move"){
+    const from = sh.from || (sh.to === "current" ? "savings" : "current"), to = sh.to || (from === "current" ? "savings" : "current");
+    body = `<div class="sheet-head"><h2>Move money</h2><button class="x" data-action="close" aria-label="Close">×</button></div>
+      <div class="amount-in"><span>£</span><input id="m-amt" inputmode="decimal" placeholder="0" autofocus aria-label="Amount"></div>
+      <div class="grid2">
+        <div class="field"><label class="label" for="m-from">From</label><select id="m-from">${potOptions(from)}</select></div>
+        <div class="field"><label class="label" for="m-to">To</label><select id="m-to">${potOptions(to)}</select></div>
+      </div>
+      <div class="field"><label class="label" for="m-date">Date</label><input id="m-date" type="date" value="${todayISO()}"></div>
+      <p class="note">${from === "savings" ? "Taking money out of savings pushes your goal date back. That's fine for a real emergency." : "Mirror this in your banking app so the pots match."}</p>
+      <p class="err" id="m-err" hidden></p>
+      <button class="btn" data-action="save-move">Move</button>`;
+  } else if (sh.kind === "income"){
+    body = `<div class="sheet-head"><h2>Money in</h2><button class="x" data-action="close" aria-label="Close">×</button></div>
+      <p class="note">Money arriving from outside your pots: someone paying you back, a refund, a gift. For your monthly pay, use the payday button.</p>
+      <div class="amount-in"><span>£</span><input id="i-amt" inputmode="decimal" placeholder="0" autofocus aria-label="Amount"></div>
+      <div class="grid2">
+        <div class="field"><label class="label" for="i-to">Into</label><select id="i-to">${potOptions(sh.pot)}</select></div>
+        <div class="field"><label class="label" for="i-date">Date</label><input id="i-date" type="date" value="${todayISO()}"></div>
+      </div>
+      <div class="field"><label class="label" for="i-note">From (optional)</label><input id="i-note" placeholder="e.g. Owed by Sam"></div>
+      <p class="err" id="i-err" hidden></p>
+      <button class="btn" data-action="save-income">Add money</button>`;
+  } else if (sh.kind === "set"){
+    const k = sh.pot, cur = balances()[k];
+    body = `<div class="sheet-head"><h2>Set ${POTS[k].name}</h2><button class="x" data-action="close" aria-label="Close">×</button></div>
+      <p class="note">Enter what your banking app shows right now. Currently ${money(cur)} here.</p>
+      <div class="amount-in"><span>£</span><input id="b-amt" inputmode="decimal" placeholder="${cur}" autofocus aria-label="New balance"></div>
+      <p class="err" id="b-err" hidden></p>
+      <button class="btn" data-action="save-set" data-pot="${k}">Set balance</button>`;
+  } else if (sh.kind === "payday"){
+    const now = ym(todayISO()), p = phaseFor(now);
+    body = `<div class="sheet-head"><h2>${fmtM(now, true)} payday</h2><button class="x" data-action="close" aria-label="Close">×</button></div>
+      <p class="note">Records your pay into the current account, then moves each pot's share. Change any amount if this month is different.</p>
+      <div class="grid2">
+        <div class="field"><label class="label" for="pd-th">Take-home (£)</label><input id="pd-th" inputmode="decimal" value="${p.takeHome}"></div>
+        <div class="field"><label class="label" for="pd-date">Paid on</label><input id="pd-date" type="date" value="${todayISO()}"></div>
+        <div class="field"><label class="label" for="pd-sv">→ Savings (£)</label><input id="pd-sv" inputmode="decimal" value="${p.savings}"></div>
+        <div class="field"><label class="label" for="pd-fn">→ Fun (£)</label><input id="pd-fn" inputmode="decimal" value="${p.fun}"></div>
+        <div class="field"><label class="label" for="pd-tr">→ Trains (£)</label><input id="pd-tr" inputmode="decimal" value="${p.train}"></div>
+      </div>
+      <p class="note" id="pd-left"></p>
+      <p class="err" id="pd-err" hidden></p>
+      <button class="btn" data-action="save-payday">Confirm payday</button>`;
+  }
+  L.innerHTML = `<div class="scrim" data-action="scrim"><div class="sheet" role="dialog" aria-modal="true">${body}</div></div>`;
+  if (sh.kind === "payday") updatePaydayLeft();
+}
+function updatePaydayLeft(){
+  const el = document.getElementById("pd-left"); if (!el) return;
+  const v = id => parseAmt(document.getElementById(id).value) || 0;
+  const left = v("pd-th") - v("pd-sv") - v("pd-fn") - v("pd-tr"), b = settings().budgets;
+  el.innerHTML = `Leaves <strong>${money(left)}</strong> in your current account for rent (${money(b.rent)}), food & essentials (${money(b.essentials)}) and buffer (${money(left - b.rent - b.essentials)}).`;
+}
+function showErr(id, msg){ const e = document.getElementById(id); e.textContent = msg; e.hidden = false; }
+
+/* ---------- actions ---------- */
+document.addEventListener("click", e => {
+  const tabBtn = e.target.closest("[data-tab]");
+  if (tabBtn){ S.tab = tabBtn.dataset.tab; S.confirmDel = null; render(); window.scrollTo(0,0); return; }
+  const go = e.target.closest("[data-tab-go]");
+  if (go){ S.tab = go.dataset.tabGo; render(); window.scrollTo(0,0); return; }
+  const a = e.target.closest("[data-action]"); if (!a) return;
+  const act = a.dataset.action;
+  if (act === "scrim"){ if (e.target === a) closeSheet(); return; }
+  if (act === "close") return closeSheet();
+  if (act === "open-spend") return openSheet("spend");
+  if (act === "open-move") return openSheet("move", { from: a.dataset.from, to: a.dataset.to });
+  if (act === "open-set") return openSheet("set", { pot: a.dataset.pot });
+  if (act === "open-income") return openSheet("income", { pot: a.dataset.pot || "current" });
+  if (act === "save-income"){
+    const amt = parseAmt(document.getElementById("i-amt").value);
+    if (!(amt > 0)) return showErr("i-err", "Enter an amount above £0.");
+    const to = document.getElementById("i-to").value;
+    const idate = document.getElementById("i-date").value || todayISO(), later = idate > todayISO();
+    writeTx({ id: uid(), kind: "income", expected: later, amount: amt, to, date: idate, note: document.getElementById("i-note").value.trim().slice(0,80), created: Date.now() });
+    closeSheet(); toast(later ? "I'll check with you on " + fmtDay(idate) : "Added "+money(amt)+" to "+POTS[to].name); return;
+  }
+  if (act === "open-payday") return openSheet("payday");
+  if (act === "cat"){
+    const sh = S.sheet; sh.amt = document.getElementById("s-amt").value; sh.note = document.getElementById("s-note").value; sh.date = document.getElementById("s-date").value;
+    sh.cat = a.dataset.cat; sh.from = CATS[sh.cat].from; sh.rerender = true; renderSheet(); return;
+  }
+  if (act === "save-spend"){
+    const amt = parseAmt(document.getElementById("s-amt").value);
+    if (!(amt > 0)) return showErr("s-err", "Enter an amount above £0.");
+    const date = document.getElementById("s-date").value || todayISO();
+    writeTx({ id: uid(), kind: "spend", amount: amt, cat: S.sheet.cat || "essentials", from: document.getElementById("s-from").value, date, note: document.getElementById("s-note").value.trim().slice(0,80), created: Date.now() });
+    closeSheet(); toast("Logged "+money(amt)); return;
+  }
+  if (act === "save-move"){
+    const amt = parseAmt(document.getElementById("m-amt").value), from = document.getElementById("m-from").value, to = document.getElementById("m-to").value;
+    if (!(amt > 0)) return showErr("m-err", "Enter an amount above £0.");
+    if (from === to) return showErr("m-err", "Pick two different pots.");
+    writeTx({ id: uid(), kind: "move", amount: amt, from, to, date: document.getElementById("m-date").value || todayISO(), note: "", created: Date.now() });
+    closeSheet(); toast("Moved "+money(amt)+" to "+POTS[to].name); return;
+  }
+  if (act === "save-set"){
+    const k = a.dataset.pot, target = parseAmt(document.getElementById("b-amt").value);
+    if (!isFinite(target)) return showErr("b-err", "Enter the balance from your banking app.");
+    const delta = Math.round((target - balances()[k])*100)/100;
+    if (delta !== 0) writeTx({ id: uid(), kind: "adjust", amount: delta, to: k, date: todayISO(), note: "", created: Date.now() });
+    closeSheet(); toast(POTS[k].name+" set to "+money(target)); return;
+  }
+  if (act === "save-payday"){
+    const v = id => parseAmt(document.getElementById(id).value);
+    const th = v("pd-th"), sv = v("pd-sv") || 0, fn = v("pd-fn") || 0, tr = v("pd-tr") || 0, date = document.getElementById("pd-date").value || todayISO();
+    if (!(th > 0)) return showErr("pd-err", "Enter your take-home pay.");
+    if (sv + fn + tr > th) return showErr("pd-err", "The pot transfers add up to more than your pay.");
+    const t0 = Date.now();
+    (async () => {
+      await writeTx({ id: uid(), kind: "income", payday: true, amount: th, to: "current", date, note: "Pay", created: t0 });
+      if (sv) await writeTx({ id: uid(), kind: "move", amount: sv, from: "current", to: "savings", date, note: "Payday savings", created: t0+1 });
+      if (fn) await writeTx({ id: uid(), kind: "move", amount: fn, from: "current", to: "fun", date, note: "Payday fun money", created: t0+2 });
+      if (tr) await writeTx({ id: uid(), kind: "move", amount: tr, from: "current", to: "train", date, note: "Payday train pot", created: t0+3 });
+    })();
+    closeSheet(); toast("Payday done. "+money(sv)+" saved."); return;
+  }
+  if (act === "tx"){ S.confirmDel = S.confirmDel === a.dataset.id ? null : a.dataset.id; render(); return; }
+  if (act === "tx-keep"){ S.confirmDel = null; render(); return; }
+  if (act === "due-yes"){ const t = S.txs.find(x => x.id === a.dataset.id); S.dueMode = null; updateTx(a.dataset.id, { expected: false, date: todayISO() }); toast(money(t.amount) + " added to " + POTS[t.to].name); return; }
+  if (act === "due-amount" || act === "due-drop"){ S.dueMode = { id: a.dataset.id, kind: act }; render(); return; }
+  if (act === "due-back"){ S.dueMode = null; render(); return; }
+  if (act === "due-save-amount"){
+    const amt = parseAmt(document.getElementById("due-amt").value);
+    if (!(amt > 0)) return showErr("due-err", "Enter the amount that arrived.");
+    const t = S.txs.find(x => x.id === a.dataset.id); S.dueMode = null;
+    updateTx(a.dataset.id, { expected: false, amount: amt, date: todayISO() }); toast(money(amt) + " added to " + POTS[t.to].name); return;
+  }
+  if (act === "due-later"){ S.dueMode = null; updateTx(a.dataset.id, { date: tomorrowISO() }); toast("I'll ask again tomorrow"); return; }
+  if (act === "due-remove"){ S.dueMode = null; deleteTx(a.dataset.id); toast("Expected payment removed"); return; }
+  if (act === "tx-del"){ S.confirmDel = null; deleteTx(a.dataset.id); toast("Entry deleted"); return; }
+  if (act === "m-prev" || act === "m-next"){ S.month = addM(S.month || ym(todayISO()), act === "m-prev" ? -1 : 1); render(); return; }
+  if (act === "plan-save"){
+    const s = clone(settings()), v = id => parseAmt(document.getElementById(id).value);
+    s.goal = v("g-goal"); s.startMonth = document.getElementById("g-start").value || s.startMonth;
+    s.budgets.rent = v("g-rent"); s.budgets.essentials = v("g-ess");
+    s.cardFreeDate = document.getElementById("g-card").value || "";
+    s.phases.forEach((p,i) => { p.label = document.getElementById(`p${i}-lb`).value.trim() || p.label; p.from = document.getElementById(`p${i}-from`).value || p.from; p.takeHome = v(`p${i}-th`); p.savings = v(`p${i}-sv`); p.fun = v(`p${i}-fn`); p.train = v(`p${i}-tr`); });
+    const nums = [s.goal, s.budgets.rent, s.budgets.essentials, ...s.phases.flatMap(p=>[p.takeHome,p.savings,p.fun,p.train])];
+    if (nums.some(n => !isFinite(n) || n < 0) || !(s.goal > 0)) return showErr("plan-err", "Every amount needs to be a number of £0 or more, and the goal above £0.");
+    S.settings = s; writeSettings(); toast("Plan saved"); return;
+  }
+  if (act === "phase-add"){
+    const s = settings(), last = s.phases[s.phases.length-1];
+    s.phases.push({ from: addM(last.from, 12), label: "Pay rise " + s.phases.length, takeHome: last.takeHome, savings: last.savings, fun: last.fun, train: last.train });
+    writeSettings(); toast("Stage added. Fill in the new figures, then save."); return;
+  }
+  if (act === "phase-del"){ settings().phases.splice(+a.dataset.i, 1); writeSettings(); toast("Stage removed"); return; }
+  if (act === "export"){ exportCSV(); return; }
+  if (act === "backup"){ backupFile(); return; }
+  if (act === "backup-share"){ shareBackup(); return; }
+  if (act === "import"){ document.getElementById("import-file").click(); return; }
+  if (act === "import-confirm"){ applyImport(); return; }
+  if (act === "import-cancel"){ S.importing = null; render(); return; }
+  if (act === "start-fresh"){ S.meta.configured = true; saveLocal(); S.tab = "plan"; render(); window.scrollTo(0,0); return; }
+});
+document.addEventListener("input", e => { if (e.target.id && e.target.id.startsWith("pd-")) updatePaydayLeft(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && S.sheet) closeSheet(); });
+
+/* ---------- files: backup, export, import ---------- */
+function saveFile(name, text, type){
+  const blob = new Blob([text], { type }), url = URL.createObjectURL(blob), a = document.createElement("a");
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+function backupText(){ return JSON.stringify({ app: "road20k", version: 1, exported: new Date().toISOString(), settings: S.settings, txs: S.txs }, null, 1); }
+function markBackedUp(){ S.meta.lastBackup = todayISO(); saveLocal(); render(); }
+function backupFile(){ saveFile("road-to-20k-backup-"+todayISO()+".json", backupText(), "application/json"); markBackedUp(); toast("Backup saved to Downloads"); }
+async function shareBackup(){
+  const file = new File([backupText()], "road-to-20k-backup-"+todayISO()+".json", { type: "application/json" });
+  try { await navigator.share({ files: [file], title: "Road to £20k backup" }); markBackedUp(); toast("Backup sent"); }
+  catch(e){ if (e && e.name !== "AbortError") toast("Couldn't open sharing. Use Save backup instead."); }
+}
+function canShareFiles(){ try { return !!(navigator.canShare && navigator.canShare({ files: [new File(["x"], "x.json", { type: "application/json" })] })); } catch(e){ return false; } }
+function exportCSV(){
+  const head = "date,type,amount,category,from,to,note";
+  const rows = [...S.txs].reverse().map(t => [t.date, t.kind, t.amount, t.cat ? CATS[t.cat].name : "", t.from ? POTS[t.from].name : "", t.to ? POTS[t.to].name : "", '"'+String(t.note||"").replace(/"/g,'""')+'"'].join(","));
+  saveFile("road-to-20k-"+todayISO()+".csv", [head, ...rows].join("\n"), "text/csv"); toast("CSV saved to Downloads");
+}
+function validTx(t){
+  return t && typeof t.id === "string" && typeof t.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(t.date) && typeof t.amount === "number" && isFinite(t.amount)
+    && ["spend","income","move","adjust"].includes(t.kind)
+    && (!t.from || POTS[t.from]) && (!t.to || POTS[t.to]) && (!t.cat || CATS[t.cat]);
+}
+document.addEventListener("change", e => {
+  if (e.target.id !== "import-file") return;
+  const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const d = JSON.parse(r.result);
+      if (d.app !== "road20k" || !Array.isArray(d.txs)) throw 0;
+      const txs = d.txs.filter(validTx), have = new Set(S.txs.map(t => t.id));
+      S.importing = { settings: d.settings && Array.isArray(d.settings.phases) ? d.settings : null, txs, fresh: txs.filter(t => !have.has(t.id)).length, exported: d.exported };
+      S.tab = "plan"; render(); window.scrollTo(0, document.body.scrollHeight);
+    } catch(err){ toast("That file isn't a Road to £20k backup."); }
+  };
+  r.readAsText(f);
+});
+function applyImport(){
+  const im = S.importing; if (!im) return;
+  const have = new Set(S.txs.map(t => t.id));
+  for (const t of im.txs) if (!have.has(t.id)) S.txs.push(t);
+  if (im.settings) S.settings = Object.assign(clone(DEFAULTS), im.settings);
+  S.meta.configured = true; S.importing = null; sortTx(); saveLocal();
+  S.tab = "home"; render(); window.scrollTo(0,0); toast("Imported " + im.fresh + (im.fresh === 1 ? " entry" : " entries"));
+}
+function daysSince(iso){ return iso ? Math.round((new Date(todayISO()+"T12:00:00") - new Date(iso+"T12:00:00"))/864e5) : null; }
+function backupNudge(){
+  if (S.txs.length < 5) return "";
+  const d = daysSince(S.meta.lastBackup); if (d !== null && d < 30) return "";
+  return `<div class="payday"><p><strong>${d === null ? "You haven't backed up yet" : "Last backup was " + d + " days ago"}</strong><br><span class="muted">Your entries only live on this phone. A backup keeps them safe if the phone is lost or reset.</span></p>
+    <button class="btn" data-action="${canShareFiles() ? "backup-share" : "backup"}">Back up now</button></div>`;
+}
+function welcomeHTML(){
+  return `<section class="hero">
+    <div class="label">Welcome</div>
+    <h1 style="font-size:1.8rem">Road to £20k</h1>
+    <p class="muted" style="margin:0">Bring over your plan and entries from the version on Claude: open it, go to Plan → Back up everything, then import that file here.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-action="import">Import backup</button><button class="btn ghost" data-action="start-fresh">Set up from scratch</button></div>
+  </section>${S.importing ? "" : ""}`;
+}
+function dataHTML(){
+  const d = daysSince(S.meta.lastBackup), im = S.importing;
+  const share = canShareFiles();
+  return `<section class="panel" id="data"><h2>Your data</h2>
+    <p class="note">Everything is stored on this phone only. ${d === null ? "No backup yet." : "Last backup: " + (d === 0 ? "today" : d + " days ago") + "."} ${share ? "<strong>Send backup</strong> lets you save it to Google Drive or email it to yourself." : ""}</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      ${share ? `<button class="btn" data-action="backup-share">Send backup…</button>` : ""}
+      <button class="btn ${share ? "ghost" : ""}" data-action="backup">Save backup</button>
+      <button class="btn ghost" data-action="import">Import backup</button>
+      <button class="btn ghost" data-action="export">Export CSV</button>
+    </div>
+    ${im ? `<div class="payday" style="flex-direction:column;align-items:stretch">
+      <p><strong>Import this backup?</strong><br><span class="muted">${im.fresh} new ${im.fresh === 1 ? "entry" : "entries"} will be added${im.txs.length - im.fresh ? " (" + (im.txs.length - im.fresh) + " you already have are skipped)" : ""}.${im.settings ? " Your monthly plan will be replaced with the one in the file." : ""}</span></p>
+      <div class="row-end"><button class="btn ghost" data-action="import-cancel">Cancel</button><button class="btn" data-action="import-confirm">Import</button></div></div>` : ""}
+  </section>`;
+}
+
+let toastTimer;
+function toast(msg){
+  let t = document.querySelector(".toast"); if (!t){ t = document.createElement("div"); t.className = "toast"; t.setAttribute("role","status"); document.body.appendChild(t); }
+  t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(()=>{ t.hidden = true; }, 2200);
+}
+
+loadLocal(); sortTx(); render(); updateSync();
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e){}
+if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+</script>
+</body>
+</html>
