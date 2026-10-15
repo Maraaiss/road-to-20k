@@ -20,11 +20,11 @@
   --save:#2E46C9; --fun:#D23F68; --train:#B57A0C; --current:#4A5578;
   --good:#1B7F53; --warn:#B4511A; --on-accent:#FFFFFF;
   /* glass: frosted panels over a soft coloured glow; light catches the top-left edge */
-  --glass-bg:rgba(255,255,255,.62); --glass-bar:rgba(255,255,255,.74);
+  --glass-bg:rgba(255,255,255,.88); --glass-bar:rgba(255,255,255,.94);
   --edge-hi:rgba(255,255,255,1); --edge-mid:rgba(255,255,255,.6); --edge-lo:rgba(20,26,51,.08);
   --spec:rgba(255,255,255,.75); --glint:rgba(255,255,255,.4);
   --glass-shadow:0 1px 2px rgba(20,26,51,.05),0 10px 28px rgba(20,26,51,.07);
-  --amb1:rgba(110,135,255,.30); --amb2:rgba(255,150,200,.20); --amb3:rgba(110,215,230,.18);
+  --amb1:rgba(110,135,255,.22); --amb2:rgba(255,150,200,.14); --amb3:rgba(110,215,230,.12);
   --f-display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
   --f-body:"Instrument Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
   --f-mono:"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
@@ -33,11 +33,11 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0D1020; --surface:#161A2D; --sunk:#1E2338; --ink:#EEF0F8; --muted:#9AA0BC; --line:#2A3049;
   --save:#8496FF; --fun:#FF7FA0; --train:#EFB441; --current:#A9B2D6;
-  --good:#52C990; --warn:#F28C50; --on-accent:#0D1020; --glass-bg:rgba(24,29,52,.56); --glass-bar:rgba(16,20,38,.74); --edge-hi:rgba(255,255,255,.30); --edge-mid:rgba(255,255,255,.08); --edge-lo:rgba(255,255,255,.07); --spec:rgba(255,255,255,.075); --glint:rgba(255,255,255,.035); --glass-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 12px 32px rgba(0,0,0,.35); --amb1:rgba(70,95,255,.26); --amb2:rgba(170,80,210,.15); --amb3:rgba(40,170,200,.10); color-scheme:dark}}
+  --good:#52C990; --warn:#F28C50; --on-accent:#0D1020; --glass-bg:rgba(23,27,47,.9); --glass-bar:rgba(16,20,38,.95); --edge-hi:rgba(255,255,255,.30); --edge-mid:rgba(255,255,255,.08); --edge-lo:rgba(255,255,255,.07); --spec:rgba(255,255,255,.075); --glint:rgba(255,255,255,.035); --glass-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 12px 32px rgba(0,0,0,.35); --amb1:rgba(70,95,255,.16); --amb2:rgba(170,80,210,.08); --amb3:rgba(40,170,200,.05); color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0D1020; --surface:#161A2D; --sunk:#1E2338; --ink:#EEF0F8; --muted:#9AA0BC; --line:#2A3049;
   --save:#8496FF; --fun:#FF7FA0; --train:#EFB441; --current:#A9B2D6;
-  --good:#52C990; --warn:#F28C50; --on-accent:#0D1020; --glass-bg:rgba(24,29,52,.56); --glass-bar:rgba(16,20,38,.74); --edge-hi:rgba(255,255,255,.30); --edge-mid:rgba(255,255,255,.08); --edge-lo:rgba(255,255,255,.07); --spec:rgba(255,255,255,.075); --glint:rgba(255,255,255,.035); --glass-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 12px 32px rgba(0,0,0,.35); --amb1:rgba(70,95,255,.26); --amb2:rgba(170,80,210,.15); --amb3:rgba(40,170,200,.10); color-scheme:dark}
+  --good:#52C990; --warn:#F28C50; --on-accent:#0D1020; --glass-bg:rgba(23,27,47,.9); --glass-bar:rgba(16,20,38,.95); --edge-hi:rgba(255,255,255,.30); --edge-mid:rgba(255,255,255,.08); --edge-lo:rgba(255,255,255,.07); --spec:rgba(255,255,255,.075); --glint:rgba(255,255,255,.035); --glass-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 12px 32px rgba(0,0,0,.35); --amb1:rgba(70,95,255,.16); --amb2:rgba(170,80,210,.08); --amb3:rgba(40,170,200,.05); color-scheme:dark}
 
 *{box-sizing:border-box}
 html{color-scheme:light;background:var(--bg)}
@@ -156,7 +156,7 @@ button{cursor:pointer}
 .legend i.dash{background:repeating-linear-gradient(90deg,var(--muted) 0 4px,transparent 4px 7px)}
 
 /* nav + fab */
-.nav{position:fixed;left:0;right:0;bottom:0;background:var(--glass-bar);-webkit-backdrop-filter:blur(20px) saturate(160%);backdrop-filter:blur(20px) saturate(160%);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom,0px);padding-left:max(8px, env(safe-area-inset-left, 0px));padding-right:max(8px, env(safe-area-inset-right, 0px));z-index:5}
+.nav{position:fixed;left:0;right:0;bottom:0;background:var(--glass-bar);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom,0px);padding-left:max(8px, env(safe-area-inset-left, 0px));padding-right:max(8px, env(safe-area-inset-right, 0px));z-index:5}
 .nav-in{display:grid;grid-template-columns:repeat(4,1fr);width:100%;max-width:560px}
 .nav button{background:none;border:0;padding:12px 4px 13px;font-size:.8rem;font-weight:600;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:4px}
 .nav button svg{width:22px;height:22px}
@@ -182,17 +182,15 @@ button{cursor:pointer}
 /* glass surfaces */
 .ambient{position:fixed;inset:0;z-index:-1;pointer-events:none;
   background:radial-gradient(70% 45% at 8% 4%,var(--amb1),transparent 70%),radial-gradient(60% 40% at 100% 42%,var(--amb2),transparent 70%),radial-gradient(70% 45% at 15% 100%,var(--amb3),transparent 70%)}
-.panel,.hero,.pot,.pot-full,.payday{position:relative;isolation:isolate;border:0;background:var(--glass-bg);
-  -webkit-backdrop-filter:blur(20px) saturate(160%);backdrop-filter:blur(20px) saturate(160%);box-shadow:var(--glass-shadow)}
+.panel,.hero,.pot,.pot-full,.payday{position:relative;isolation:isolate;border:0;background:var(--glass-bg);box-shadow:var(--glass-shadow)}
 .payday{background:color-mix(in srgb,var(--save) 12%,var(--glass-bg))}
 /* the edge: a 1px rim, bright where light hits the top-left corner, fading round the card */
 .panel::before,.hero::before,.pot::before,.pot-full::before,.payday::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;z-index:-1;
   background:linear-gradient(150deg,var(--edge-hi) 0%,var(--edge-mid) 20%,transparent 45%,transparent 72%,var(--edge-lo) 100%);
   -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
-/* the shine: a soft glow in the top-left corner and one faint diagonal glint */
+/* the shine: a soft glow in the top-left corner */
 .panel::after,.hero::after,.pot::after,.pot-full::after,.payday::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:-1;
-  background:radial-gradient(160px 100px at 0% 0%,var(--spec),transparent 70%),linear-gradient(118deg,transparent 62%,var(--glint) 64.5%,transparent 69%)}
-.payday::after{background:radial-gradient(160px 100px at 0% 0%,var(--spec),transparent 70%)}
+  background:radial-gradient(240px 150px at 0% 0%,var(--spec),transparent 75%)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
 </head>
