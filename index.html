@@ -16,9 +16,14 @@
 <style>
 /* Layout: one-column phone app — hero progress ruler, then stacked panels; bottom tab bar + floating "log spend" button */
 :root{
+  --sheen:.10; --sheen-blend:multiply;
   --bg:#F2F3F8; --surface:#FFFFFF; --sunk:#E8EAF2; --ink:#141A33; --muted:#5B6280; --line:#D9DCE8;
   --save:#2E46C9; --fun:#D23F68; --train:#B57A0C; --current:#4A5578;
   --good:#1B7F53; --warn:#B4511A; --on-accent:#FFFFFF;
+  /* holographic foil: pastel spectrum, moved by phone tilt (--hx/--hy) */
+  --holo:linear-gradient(115deg,#ff8fd0 0%,#ffcf70 16%,#9cf5a0 33%,#78e3ff 50%,#a596ff 66%,#ff8fd0 83%,#ffcf70 100%);
+  --holo-ink:#141A33; --hx:30%; --hy:50%;
+  --holo-txt:linear-gradient(115deg,#d6338f 0%,#c27c00 16%,#1f9a47 33%,#0a8db5 50%,#6b52e0 66%,#d6338f 83%,#c27c00 100%);
   --f-display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
   --f-body:"Instrument Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
   --f-mono:"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
@@ -27,14 +32,14 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0D1020; --surface:#161A2D; --sunk:#1E2338; --ink:#EEF0F8; --muted:#9AA0BC; --line:#2A3049;
   --save:#8496FF; --fun:#FF7FA0; --train:#EFB441; --current:#A9B2D6;
-  --good:#52C990; --warn:#F28C50; --on-accent:#0D1020; color-scheme:dark}}
+  --good:#52C990; --warn:#F28C50; --on-accent:#0D1020; --sheen:.07; --sheen-blend:screen; --holo-txt:var(--holo); color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0D1020; --surface:#161A2D; --sunk:#1E2338; --ink:#EEF0F8; --muted:#9AA0BC; --line:#2A3049;
   --save:#8496FF; --fun:#FF7FA0; --train:#EFB441; --current:#A9B2D6;
-  --good:#52C990; --warn:#F28C50; --on-accent:#0D1020; color-scheme:dark}
+  --good:#52C990; --warn:#F28C50; --on-accent:#0D1020; --sheen:.07; --sheen-blend:screen; --holo-txt:var(--holo); color-scheme:dark}
 
 *{box-sizing:border-box}
-html{color-scheme:light}
+html{color-scheme:light;background:var(--bg)}
 body{margin:0}
 [hidden]{display:none!important}
 img{max-width:100%}
@@ -52,7 +57,7 @@ button{cursor:pointer}
 
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .brand{font-family:var(--f-display);font-weight:800;font-size:1.05rem}
-.brand b{color:var(--save)}
+.brand b,.holo-text{background-image:var(--holo-txt);background-size:300% 300%;background-position:var(--hx) var(--hy);-webkit-background-clip:text;background-clip:text;color:transparent}
 .sync{font-family:var(--f-mono);font-size:.68rem;color:var(--muted);display:flex;align-items:center;gap:6px}
 .sync i{width:7px;height:7px;border-radius:50%;background:var(--muted);display:inline-block}
 .sync.on i{background:var(--good)}
@@ -61,12 +66,15 @@ button{cursor:pointer}
 .flat{display:flex;flex-direction:column;gap:12px}
 
 /* hero */
-.hero{background:var(--surface);border-radius:var(--r);padding:18px 16px 16px;display:flex;flex-direction:column;gap:14px;border:1px solid var(--line)}
+.hero{border-radius:var(--r);padding:18px 16px 16px;display:flex;flex-direction:column;gap:14px;border:1.5px solid transparent;position:relative;overflow:hidden;
+  background:linear-gradient(var(--surface),var(--surface)) padding-box,var(--holo) border-box;background-size:auto,300% 300%;background-position:0 0,var(--hx) var(--hy)}
+.hero::after{content:"";position:absolute;inset:0;pointer-events:none;background-image:var(--holo);background-size:300% 300%;background-position:var(--hx) var(--hy);opacity:var(--sheen);mix-blend-mode:var(--sheen-blend)}
+.hero > *{position:relative;z-index:1}
 .hero .big{font-family:var(--f-display);font-weight:800;font-size:clamp(2.6rem,12vw,3.4rem);line-height:1;letter-spacing:-.03em}
 .hero .big small{font-size:.38em;font-weight:500;color:var(--muted);letter-spacing:0;margin-left:6px}
 .ruler{position:relative;height:46px}
 .ruler .track{position:absolute;left:0;right:0;top:8px;height:14px;border-radius:7px;background:var(--sunk);overflow:hidden}
-.ruler .fill{height:100%;background:var(--save);border-radius:7px;transition:width .5s ease}
+.ruler .fill{height:100%;background-image:var(--holo);background-size:300% 300%;background-position:var(--hx) var(--hy);border-radius:7px;transition:width .5s ease}
 .ruler .plan{position:absolute;top:2px;width:2px;height:26px;background:var(--ink);border-radius:1px}
 .ruler .tick{position:absolute;top:28px;transform:translateX(-50%);font-family:var(--f-mono);font-size:.66rem;color:var(--muted);white-space:nowrap}
 .ruler .tick:first-of-type{transform:none}
@@ -83,9 +91,9 @@ button{cursor:pointer}
 /* payday banner */
 .payday{border-radius:var(--r);padding:14px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between;background:color-mix(in srgb,var(--save) 10%,var(--surface));border:1px solid color-mix(in srgb,var(--save) 30%,transparent);flex-wrap:wrap}
 .payday p{margin:0;min-width:0;flex:1 1 200px}
-.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:600;background:var(--save);color:var(--on-accent)}
-.btn.ghost{background:var(--sunk);color:var(--ink)}
-.btn.danger{background:var(--warn);color:var(--on-accent)}
+.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:600;background-image:var(--holo);background-size:300% 300%;background-position:var(--hx) var(--hy);color:var(--holo-ink);box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
+.btn.ghost{background:var(--sunk);color:var(--ink);box-shadow:none}
+.btn.danger{background:var(--warn);color:var(--on-accent);box-shadow:none}
 .btn.sm{padding:7px 11px;font-size:.85rem}
 .btn:disabled{opacity:.5;cursor:default}
 
@@ -153,7 +161,7 @@ button{cursor:pointer}
 .nav button{background:none;border:0;padding:12px 4px 13px;font-size:.8rem;font-weight:600;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:4px}
 .nav button svg{width:22px;height:22px}
 .nav button[aria-current="page"]{color:var(--save)}
-.fab{position:fixed;right:max(18px, calc(env(safe-area-inset-right, 0px) + 18px));bottom:calc(env(safe-area-inset-bottom, 0px) + 78px);z-index:6;background:var(--ink);color:var(--bg);border:0;border-radius:999px;padding:14px 20px;font-weight:700;font-size:.95rem;display:flex;gap:8px;align-items:center;box-shadow:0 8px 24px rgba(10,14,30,.28)}
+.fab{position:fixed;right:max(18px, calc(env(safe-area-inset-right, 0px) + 18px));bottom:calc(env(safe-area-inset-bottom, 0px) + 78px);z-index:6;background-image:var(--holo);background-size:300% 300%;background-position:var(--hx) var(--hy);color:var(--holo-ink);border:0;border-radius:999px;padding:14px 20px;font-weight:700;font-size:.95rem;display:flex;gap:8px;align-items:center;box-shadow:0 8px 24px rgba(10,14,30,.28)}
 
 /* sheet */
 .scrim{position:fixed;inset:0;background:rgba(8,10,22,.45);z-index:10;display:flex;align-items:flex-end;justify-content:center}
@@ -171,7 +179,19 @@ button{cursor:pointer}
 .err{color:var(--warn);font-size:.85rem;font-weight:600;margin:0}
 .row-end{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom, 0px) + 140px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:20;font-size:.9rem;max-width:calc(100% - 32px)}
-@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+/* savings pot wears the foil */
+.pot,.pot-full{position:relative;overflow:hidden}
+.pot[data-pot="savings"]{border-top-color:transparent}
+.pot-full[data-pot="savings"]{border-left-color:transparent}
+.pot[data-pot="savings"]::before,.pot-full[data-pot="savings"]::before{content:"";position:absolute;background-image:var(--holo);background-size:300% 300%;background-position:var(--hx) var(--hy)}
+.pot[data-pot="savings"]::before{left:0;right:0;top:-4px;height:4px}
+.pot-full[data-pot="savings"]::before{top:0;bottom:0;left:-5px;width:5px}
+/* when the phone can't report tilt, the foil drifts slowly on its own */
+@keyframes holo-drift{from{--hx:0%}to{--hx:100%}}
+@property --hx{syntax:"<percentage>";inherits:true;initial-value:30%}
+@property --hy{syntax:"<percentage>";inherits:true;initial-value:50%}
+html.holo-auto{animation:holo-drift 7s ease-in-out infinite alternate}
+@media (prefers-reduced-motion: reduce){*{transition:none!important} html.holo-auto{animation:none}}
 </style>
 </head>
 <body>
@@ -404,7 +424,7 @@ function viewHome(){
   <section class="flat" aria-label="Pots">
     <div class="phase-head"><h2>Pots</h2><div class="acts" style="display:flex;gap:8px"><button class="btn ghost sm" data-action="open-income" data-pot="current">Money in</button><button class="btn ghost sm" data-action="open-move">Move money</button></div></div>
     <div class="pots">${["current","savings","fun","train"].map(k => `
-      <div class="pot" style="--c:var(${POTS[k].c})"><span class="label">${POTS[k].name}</span><strong>${money(b[k])}</strong></div>`).join("")}</div>
+      <div class="pot" data-pot="${k}" style="--c:var(${POTS[k].c})"><span class="label">${POTS[k].name}</span><strong>${money(b[k])}</strong></div>`).join("")}</div>
   </section>
 
   <section class="panel" aria-label="Recent">
@@ -496,7 +516,7 @@ function viewPots(){
       <p class="note">Covers about <strong>${runway.toFixed(1)} months</strong> of tickets at ${money(ph.train)}/month. Getting one month ahead lets you book 8 weeks out without the card.</p>`
   };
   return ["savings","fun","train","current"].map(k => `
-    <section class="pot-full" style="--c:var(${POTS[k].c})">
+    <section class="pot-full" data-pot="${k}" style="--c:var(${POTS[k].c})">
       <div class="head"><h2>${POTS[k].name}</h2><strong>${money(b[k])}</strong></div>
       <span class="muted" style="font-size:.88rem">${POTS[k].why}</span>
       ${extra[k]}
@@ -812,7 +832,7 @@ function backupNudge(){
 function welcomeHTML(){
   return `<section class="hero">
     <div class="label">Welcome</div>
-    <h1 style="font-size:1.8rem">Road to £20k</h1>
+    <h1 style="font-size:1.8rem">Road to <span class="holo-text">£20k</span></h1>
     <p class="muted" style="margin:0">Bring over your plan and entries from the version on Claude: open it, go to Plan → Back up everything, then import that file here.</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-action="import">Import backup</button><button class="btn ghost" data-action="start-fresh">Set up from scratch</button></div>
   </section>${S.importing ? "" : ""}`;
@@ -841,6 +861,20 @@ function toast(msg){
 }
 
 loadLocal(); sortTx(); render(); updateSync();
+/* Holographic tilt: follow the phone's angle; drift on its own until tilt data arrives. */
+(function(){
+  const root = document.documentElement;
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  root.classList.add("holo-auto");
+  let tx = null, ty = null, queued = false;
+  const clamp = v => Math.max(0, Math.min(100, v));
+  window.addEventListener("deviceorientation", e => {
+    if (e.gamma == null || e.beta == null) return;
+    root.classList.remove("holo-auto");
+    tx = clamp(50 + e.gamma * 1.6); ty = clamp(50 + (e.beta - 45) * 1.2);
+    if (!queued){ queued = true; requestAnimationFrame(() => { queued = false; root.style.setProperty("--hx", tx + "%"); root.style.setProperty("--hy", ty + "%"); }); }
+  });
+})();
 try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e){}
 if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 </script>

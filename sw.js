@@ -1,6 +1,6 @@
 /* Road to £20k service worker: makes the app open with no signal.
    The page is fetched fresh when online (so updates arrive), and served from the phone's cache when not. */
-const VERSION = "v1";
+const VERSION = "v2";
 const SHELL = "r20k-shell-" + VERSION;
 const FONTS = "r20k-fonts";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "maskable-512.png"];
@@ -29,7 +29,11 @@ self.addEventListener("fetch", e => {
   }
   if (url.origin !== location.origin) return;
 
-  // The page itself: network first (3 s limit for weak train signal), then cache.
+  // The page and manifest: network first (3 s limit for weak train signal), then cache.
+  if (url.pathname.endsWith(".webmanifest")){
+    e.respondWith(fetch(req).then(r => { if (r.ok){ const copy = r.clone(); caches.open(SHELL).then(c => c.put(req, copy)); } return r; }).catch(() => caches.match(req)));
+    return;
+  }
   if (req.mode === "navigate"){
     e.respondWith((async () => {
       const c = await caches.open(SHELL);
@@ -44,7 +48,7 @@ self.addEventListener("fetch", e => {
     return;
   }
 
-  // Icons and manifest: cache first.
+  // Icons: cache first.
   e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(r => {
     if (r.ok){ const copy = r.clone(); caches.open(SHELL).then(c => c.put(req, copy)); }
     return r;
