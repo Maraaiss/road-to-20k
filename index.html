@@ -240,6 +240,7 @@ const CATS = {
   trains:     { name: "Trains",            c: "--train",   from: "train" },
   essentials: { name: "Food & essentials", c: "--current", from: "current" },
   fun:        { name: "Fun",               c: "--fun",     from: "fun" },
+  bills:      { name: "Bills",             c: "--current", from: "current" },
   oneoff:     { name: "One-off",           c: "--muted",   from: "current" }
 };
 const LS_KEY = "road20k.app.v1";
@@ -280,7 +281,26 @@ function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(
 
 function settings(){ return S.settings; }
 function phaseFor(m){ const ps = [...settings().phases].sort((a,b)=>cmpM(a.from,b.from)); let p = ps[0]; for (const x of ps) if (cmpM(x.from, m) <= 0) p = x; return p; }
-function bufferOf(p){ const b = settings().budgets; return p.takeHome - b.rent - b.essentials - p.savings - p.fun - p.train; }
+function billCat(x){ return CATS[x.cat] ? x.cat : "bills"; }
+/* only payments filed under "Bills" need their own budget line; the rest sit inside their category's budget */
+function billsTotal(){ return Math.round((settings().bills || []).filter(x => billCat(x) === "bills").reduce((a,x) => a + x.amount, 0)*100)/100; }
+function allBillsTotal(){ return Math.round((settings().bills || []).reduce((a,x) => a + x.amount, 0)*100)/100; }
+function bufferOf(p){ const b = settings().budgets; return p.takeHome - b.rent - b.essentials - billsTotal() - p.savings - p.fun - p.train; }
+/* Regular payments: each one is logged automatically from the current account on its day each month. */
+function billDue(bill, m){ const [y,mo] = m.split("-").map(Number); const last = new Date(y, mo, 0).getDate(); return m + "-" + String(Math.min(bill.day, last)).padStart(2,"0"); }
+function postBills(){
+  const today = todayISO(), now = ym(today); let added = 0;
+  for (const bill of (settings().bills || [])){
+    for (let m = bill.since; cmpM(m, now) <= 0; m = addM(m,1)){
+      const due = billDue(bill, m);
+      if (due > today) break;
+      if (S.txs.some(t => t.billId === bill.id && t.billMonth === m)) continue;
+      S.txs.push({ id: uid(), kind: "spend", amount: bill.amount, cat: billCat(bill), from: CATS[billCat(bill)].from, date: due, note: bill.name, billId: bill.id, billMonth: m, created: Date.now() + added });
+      added++;
+    }
+  }
+  if (added){ sortTx(); saveLocal(); render(); toast(added === 1 ? "1 regular payment logged" : added + " regular payments logged"); }
+}
 
 /* ---------- money maths ---------- */
 function balances(upto){
@@ -294,9 +314,14 @@ function balances(upto){
   for (const k in b) b[k] = Math.round(b[k]*100)/100;
   return b;
 }
-function paydayDone(m){ return S.txs.some(t => t.kind === "income" && (t.payday || t.note === "Pay") && ym(t.date) === m); }
+/* Paid on the last weekday of each month; that pay covers the NEXT month.
+   So the pay on Fri 30 Oct 2026 is "November payday". The prompt appears from 3 days before, in case pay lands early. */
+function lastWeekday(m){ const [y,mo] = m.split("-").map(Number); const d = new Date(y, mo, 0); while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate()-1); return isoOf(d); }
+function payWindowOpens(m){ const d = new Date(lastWeekday(m)+"T12:00:00"); d.setDate(d.getDate()-3); return isoOf(d); }
+function budgetMonth(){ const today = todayISO(), m = ym(today); return today >= payWindowOpens(m) ? addM(m,1) : m; }
+function paydayDone(B){ return S.txs.some(t => t.kind === "income" && (t.payday || t.note === "Pay") && (t.for ? t.for === B : ym(t.date) === B)); }
 function spentIn(m){
-  const by = { rent:0, trains:0, essentials:0, fun:0, oneoff:0 };
+  const by = { rent:0, trains:0, essentials:0, bills:0, fun:0, oneoff:0 };
   for (const t of S.txs) if (t.kind === "spend" && ym(t.date) === m) by[t.cat] = (by[t.cat]||0) + t.amount;
   return by;
 }
@@ -314,14 +339,14 @@ function plannedHit(target){
 function projectedHit(){
   const s = settings(); const now = ym(todayISO()); let bal = balances().savings;
   if (bal >= s.goal) return { month: now, done: true };
-  let cur = paydayDone(now) ? addM(now,1) : now;
+  const B = budgetMonth(); let cur = paydayDone(B) && todayISO() >= lastWeekday(addM(B,-1)) ? addM(B,1) : B;
   if (cmpM(cur, s.startMonth) < 0) cur = s.startMonth;
   for (let i=0;i<240;i++){ bal += phaseFor(cur).savings; if (bal >= s.goal) return { month: cur }; cur = addM(cur,1); }
   return null;
 }
 function planNow(){
-  const s = settings(); const now = ym(todayISO());
-  const m = paydayDone(now) ? now : addM(now,-1);
+  const s = settings(), B = budgetMonth();
+  const m = todayISO() >= lastWeekday(addM(B,-1)) ? B : addM(B,-1);
   return cmpM(m, s.startMonth) < 0 ? 0 : plannedBy(m);
 }
 
@@ -385,12 +410,13 @@ function cardFree(){
 
 function viewHome(){
   const b = balances(), s = settings(), now = ym(todayISO()), proj = projectedHit(), cf = cardFree();
-  const done = paydayDone(now), ph = phaseFor(now);
+  const B = budgetMonth(), done = cmpM(B, s.startMonth) < 0 || paydayDone(B), ph = phaseFor(now), pb = phaseFor(B), payOn = lastWeekday(addM(B,-1));
   const spent = spentIn(now);
   const rows = [
     { k:"rent", budget: s.budgets.rent },
     { k:"trains", budget: ph.train },
     { k:"essentials", budget: s.budgets.essentials },
+    ...(billsTotal() ? [{ k:"bills", budget: billsTotal() }] : []),
     { k:"fun", budget: Math.max(ph.fun, b.fun + spent.fun), sub: "pot incl. rollover" }
   ];
   const recent = S.txs.slice(0,5);
@@ -404,14 +430,14 @@ function viewHome(){
     ${statusPill(b.savings)}
     <div class="stats">
       <div class="stat"><span class="label">Goal date</span><strong>${proj ? (proj.done ? "Done!" : fmtM(proj.month)) : "—"}</strong></div>
-      <div class="stat"><span class="label">Saving / mo</span><strong class="num">${money(ph.savings)}</strong></div>
+      <div class="stat"><span class="label">Saving / mo</span><strong class="num">${money(pb.savings)}</strong></div>
       <div class="stat"><span class="label">${cf ? cf.l : ""}</span><strong class="num">${cf ? cf.v+" days" : "—"}</strong></div>
     </div>
   </section>
 
   ${dueHTML()}
   ${done ? "" : `<div class="payday">
-    <p><strong>${fmtM(now, true)} payday</strong><br><span class="muted">Move ${money(ph.savings)} to savings, ${money(ph.fun)} to fun, ${money(ph.train)} to trains.</span></p>
+    <p><strong>${MNL[+B.slice(5)-1]} payday</strong> <span class="muted">· ${todayISO() < payOn ? "due " + fmtDay(payOn) : "paid " + fmtDay(payOn)}</span><br><span class="muted">${todayISO() < payOn ? "When it lands, move" : "Move"} ${money(pb.savings)} to savings, ${money(pb.fun)} to fun, ${money(pb.train)} to trains.</span></p>
     <button class="btn" data-action="open-payday">Do payday</button>
   </div>`}
 
@@ -496,6 +522,7 @@ function viewSpend(){
       ${barRow("rent", spent.rent, s.budgets.rent)}
       ${barRow("trains", spent.trains, ph.train)}
       ${barRow("essentials", spent.essentials, s.budgets.essentials)}
+      ${billsTotal() || spent.bills ? barRow("bills", spent.bills, billsTotal()) : ""}
       ${barRow("fun", spent.fun, ph.fun, "monthly top-up")}
       ${spent.oneoff ? `<div class="bar-row"><span>One-off</span><span class="amt">${money(spent.oneoff)}</span></div>` : ""}
     </div>
@@ -555,9 +582,27 @@ function viewPlan(){
     <p class="err" id="plan-err" hidden></p>
     <div class="row-end"><button class="btn ghost" data-action="phase-add">Add a pay rise</button><button class="btn" data-action="plan-save">Save plan</button></div>
   </section>
+  ${billsHTML()}
   ${dataHTML()}`;
 }
 
+function billsHTML(){
+  const bills = settings().bills || [];
+  return `<section class="panel" id="bills"><div class="phase-head"><h2>Regular payments</h2>${bills.length ? `<span class="num muted">${money(allBillsTotal())}/month</span>` : ""}</div>
+    <p class="note">Direct debits and subscriptions. Each one is logged automatically on its day every month, and counts towards the budget you file it under.</p>
+    ${bills.length ? `<div class="miles">${bills.map(x => `<div class="mile" style="align-items:center"><span>${esc(x.name)} <span class="muted" style="font-size:.85rem">· ${ordinal(x.day)} · ${CATS[billCat(x)].name}</span></span>
+      <span style="display:flex;gap:10px;align-items:center"><span class="num">${money(x.amount)}</span><button class="btn ghost sm" data-action="bill-del" data-id="${esc(x.id)}" aria-label="Remove ${esc(x.name)}">Remove</button></span></div>`).join("")}</div>` : ""}
+    <div class="grid2">
+      <div class="field" style="grid-column:1/-1"><label class="label" for="bl-name">Name</label><input id="bl-name" placeholder="e.g. Phone" maxlength="40"></div>
+      <div class="field"><label class="label" for="bl-amt">Amount (£)</label><input id="bl-amt" inputmode="decimal" placeholder="0.00"></div>
+      <div class="field"><label class="label" for="bl-day">Day it leaves</label><input id="bl-day" inputmode="numeric" placeholder="1–31"></div>
+      <div class="field" style="grid-column:1/-1"><label class="label" for="bl-cat">Counts towards</label><select id="bl-cat">${Object.keys(CATS).map(k => `<option value="${k}" ${k === "essentials" ? "selected" : ""}>${CATS[k].name}</option>`).join("")}</select></div>
+    </div>
+    <p class="err" id="bl-err" hidden></p>
+    <div class="row-end"><button class="btn" data-action="bill-add">Add payment</button></div>
+  </section>`;
+}
+function ordinal(n){ const s = ["th","st","nd","rd"], v = n % 100; return n + (s[(v-20)%10] || s[v] || s[0]); }
 function phaseEditor(p, i){
   const buf = bufferOf(p);
   return `<div class="phase">
@@ -577,7 +622,7 @@ function chartSVG(){
   const end = plannedHit(s.goal) || addM(s.startMonth, 24);
   const months = []; for (let m = addM(s.startMonth,-1); cmpM(m, end) <= 0 && months.length < 60; m = addM(m,1)) months.push(m);
   const n = months.length - 1, x = i => L + (W-L-R)*i/n, y = v => T + (H-T-B)*(1 - Math.min(v, s.goal)/s.goal);
-  const planPts = months.map((m,i) => `${x(i).toFixed(1)},${y(i===0?0:plannedBy(m)).toFixed(1)}`).join(" ");
+  const planPts = months.map((m,i) => `${x(i).toFixed(1)},${y(plannedBy(addM(m,1))).toFixed(1)}`).join(" ");
   const now = ym(todayISO()); const act = [];
   months.forEach((m,i) => { if (cmpM(m, now) <= 0){ const [yy,mo] = m.split("-").map(Number); const last = new Date(yy, mo, 0).getDate(); act.push([x(i), y(Math.max(0, balances(m+"-"+String(last).padStart(2,"0")).savings))]); } });
   const grid = [0, .25, .5, .75, 1].map(f => `<line x1="${L}" x2="${W-R}" y1="${y(s.goal*f)}" y2="${y(s.goal*f)}" stroke="var(--line)" stroke-width="1"/>
@@ -646,15 +691,16 @@ function renderSheet(){
       <p class="err" id="b-err" hidden></p>
       <button class="btn" data-action="save-set" data-pot="${k}">Set balance</button>`;
   } else if (sh.kind === "payday"){
-    const now = ym(todayISO()), p = phaseFor(now);
-    body = `<div class="sheet-head"><h2>${fmtM(now, true)} payday</h2><button class="x" data-action="close" aria-label="Close">×</button></div>
-      <p class="note">Records your pay into the current account, then moves each pot's share. Change any amount if this month is different.</p>
+    const B = budgetMonth(), p = phaseFor(B), payOn = lastWeekday(addM(B,-1));
+    body = `<div class="sheet-head"><h2>${MNL[+B.slice(5)-1]} payday</h2><button class="x" data-action="close" aria-label="Close">×</button></div>
+      <p class="note">Records the pay that covers ${fmtM(B, true)} and moves each pot's share. Change any amount if this month is different.</p>
       <div class="grid2">
         <div class="field"><label class="label" for="pd-th">Take-home (£)</label><input id="pd-th" inputmode="decimal" value="${p.takeHome}"></div>
-        <div class="field"><label class="label" for="pd-date">Paid on</label><input id="pd-date" type="date" value="${todayISO()}"></div>
+        <div class="field"><label class="label" for="pd-date">Paid on</label><input id="pd-date" type="date" value="${todayISO() < payOn ? payOn : todayISO()}"></div>
         <div class="field"><label class="label" for="pd-sv">→ Savings (£)</label><input id="pd-sv" inputmode="decimal" value="${p.savings}"></div>
         <div class="field"><label class="label" for="pd-fn">→ Fun (£)</label><input id="pd-fn" inputmode="decimal" value="${p.fun}"></div>
         <div class="field"><label class="label" for="pd-tr">→ Trains (£)</label><input id="pd-tr" inputmode="decimal" value="${p.train}"></div>
+        <div class="field"><label class="label" for="pd-cc">Card bill / one-off (£)</label><input id="pd-cc" inputmode="decimal" placeholder="0"></div>
       </div>
       <p class="note" id="pd-left"></p>
       <p class="err" id="pd-err" hidden></p>
@@ -666,8 +712,9 @@ function renderSheet(){
 function updatePaydayLeft(){
   const el = document.getElementById("pd-left"); if (!el) return;
   const v = id => parseAmt(document.getElementById(id).value) || 0;
-  const left = v("pd-th") - v("pd-sv") - v("pd-fn") - v("pd-tr"), b = settings().budgets;
-  el.innerHTML = `Leaves <strong>${money(left)}</strong> in your current account for rent (${money(b.rent)}), food & essentials (${money(b.essentials)}) and buffer (${money(left - b.rent - b.essentials)}).`;
+  const left = v("pd-th") - v("pd-sv") - v("pd-fn") - v("pd-tr") - v("pd-cc"), b = settings().budgets, bl = billsTotal();
+  const buf = Math.round((left - b.rent - b.essentials - bl)*100)/100;
+  el.innerHTML = `Leaves <strong>${money(left)}</strong> in your current account for rent (${money(b.rent)}), food & essentials (${money(b.essentials)})${bl ? ", regular payments (" + money(bl) + ")" : ""} and buffer (<span style="color:${buf < 0 ? "var(--warn)" : "inherit"}">${money(buf)}</span>).${buf < 0 ? " Lower the savings or fun amount this month to cover it." : ""}`;
 }
 function showErr(id, msg){ const e = document.getElementById(id); e.textContent = msg; e.hidden = false; }
 
@@ -721,15 +768,16 @@ document.addEventListener("click", e => {
   }
   if (act === "save-payday"){
     const v = id => parseAmt(document.getElementById(id).value);
-    const th = v("pd-th"), sv = v("pd-sv") || 0, fn = v("pd-fn") || 0, tr = v("pd-tr") || 0, date = document.getElementById("pd-date").value || todayISO();
+    const th = v("pd-th"), sv = v("pd-sv") || 0, fn = v("pd-fn") || 0, tr = v("pd-tr") || 0, cc = v("pd-cc") || 0, date = document.getElementById("pd-date").value || todayISO();
     if (!(th > 0)) return showErr("pd-err", "Enter your take-home pay.");
-    if (sv + fn + tr > th) return showErr("pd-err", "The pot transfers add up to more than your pay.");
+    if (sv + fn + tr + cc > th) return showErr("pd-err", "These amounts add up to more than your pay.");
     const t0 = Date.now();
     (async () => {
-      await writeTx({ id: uid(), kind: "income", payday: true, amount: th, to: "current", date, note: "Pay", created: t0 });
+      await writeTx({ id: uid(), kind: "income", payday: true, for: budgetMonth(), amount: th, to: "current", date, note: "Pay", created: t0 });
       if (sv) await writeTx({ id: uid(), kind: "move", amount: sv, from: "current", to: "savings", date, note: "Payday savings", created: t0+1 });
       if (fn) await writeTx({ id: uid(), kind: "move", amount: fn, from: "current", to: "fun", date, note: "Payday fun money", created: t0+2 });
       if (tr) await writeTx({ id: uid(), kind: "move", amount: tr, from: "current", to: "train", date, note: "Payday train pot", created: t0+3 });
+      if (cc) await writeTx({ id: uid(), kind: "spend", amount: cc, cat: "oneoff", from: "current", date, note: "Card bill", created: t0+4 });
     })();
     closeSheet(); toast("Payday done. "+money(sv)+" saved."); return;
   }
@@ -770,6 +818,19 @@ document.addEventListener("click", e => {
   if (act === "import"){ document.getElementById("import-file").click(); return; }
   if (act === "import-confirm"){ applyImport(); return; }
   if (act === "import-cancel"){ S.importing = null; render(); return; }
+  if (act === "bill-add"){
+    const name = document.getElementById("bl-name").value.trim(), amt = parseAmt(document.getElementById("bl-amt").value), day = parseInt(document.getElementById("bl-day").value, 10);
+    if (!name) return showErr("bl-err", "Give the payment a name.");
+    if (!(amt > 0)) return showErr("bl-err", "Enter an amount above £0.");
+    if (!(day >= 1 && day <= 31)) return showErr("bl-err", "Enter the day of the month it leaves, from 1 to 31.");
+    const today = todayISO(), m = ym(today), firstDue = billDue({ day }, m);
+    // if this month's payment has already gone, it's already in your bank balance: start from next month
+    const since = firstDue < today ? addM(m,1) : m;
+    const cat = document.getElementById("bl-cat").value, s2 = settings(); s2.bills = (s2.bills || []).concat([{ id: uid(), name: name.slice(0,40), amount: amt, day, since, cat: CATS[cat] ? cat : "essentials" }]);
+    S.meta.configured = true; saveLocal(); postBills(); render();
+    toast(name + " added · next on " + fmtDay(billDue({ day }, since))); return;
+  }
+  if (act === "bill-del"){ const s2 = settings(); s2.bills = (s2.bills || []).filter(x => x.id !== a.dataset.id); saveLocal(); render(); toast("Payment removed. Past entries stay in your history."); return; }
   if (act === "start-fresh"){ S.meta.configured = true; saveLocal(); S.tab = "plan"; render(); window.scrollTo(0,0); return; }
 });
 document.addEventListener("input", e => { if (e.target.id && e.target.id.startsWith("pd-")) updatePaydayLeft(); });
@@ -819,7 +880,7 @@ function applyImport(){
   const im = S.importing; if (!im) return;
   const have = new Set(S.txs.map(t => t.id));
   for (const t of im.txs) if (!have.has(t.id)) S.txs.push(t);
-  if (im.settings) S.settings = Object.assign(clone(DEFAULTS), im.settings);
+  if (im.settings){ const keepBills = S.settings.bills; S.settings = Object.assign(clone(DEFAULTS), im.settings); if (!im.settings.bills && keepBills) S.settings.bills = keepBills; }
   S.meta.configured = true; S.importing = null; sortTx(); saveLocal();
   S.tab = "home"; render(); window.scrollTo(0,0); toast("Imported " + im.fresh + (im.fresh === 1 ? " entry" : " entries"));
 }
@@ -861,7 +922,8 @@ function toast(msg){
   t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(()=>{ t.hidden = true; }, 2200);
 }
 
-loadLocal(); sortTx(); render(); updateSync();
+loadLocal(); sortTx(); render(); updateSync(); postBills();
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") postBills(); });
 try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e){}
 if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 </script>
