@@ -700,7 +700,6 @@ function renderSheet(){
         <div class="field"><label class="label" for="pd-sv">→ Savings (£)</label><input id="pd-sv" inputmode="decimal" value="${p.savings}"></div>
         <div class="field"><label class="label" for="pd-fn">→ Fun (£)</label><input id="pd-fn" inputmode="decimal" value="${p.fun}"></div>
         <div class="field"><label class="label" for="pd-tr">→ Trains (£)</label><input id="pd-tr" inputmode="decimal" value="${p.train}"></div>
-        <div class="field"><label class="label" for="pd-cc">Card bill / one-off (£)</label><input id="pd-cc" inputmode="decimal" placeholder="0"></div>
       </div>
       <p class="note" id="pd-left"></p>
       <p class="err" id="pd-err" hidden></p>
@@ -712,7 +711,7 @@ function renderSheet(){
 function updatePaydayLeft(){
   const el = document.getElementById("pd-left"); if (!el) return;
   const v = id => parseAmt(document.getElementById(id).value) || 0;
-  const left = v("pd-th") - v("pd-sv") - v("pd-fn") - v("pd-tr") - v("pd-cc"), b = settings().budgets, bl = billsTotal();
+  const left = v("pd-th") - v("pd-sv") - v("pd-fn") - v("pd-tr"), b = settings().budgets, bl = billsTotal();
   const buf = Math.round((left - b.rent - b.essentials - bl)*100)/100;
   el.innerHTML = `Leaves <strong>${money(left)}</strong> in your current account for rent (${money(b.rent)}), food & essentials (${money(b.essentials)})${bl ? ", regular payments (" + money(bl) + ")" : ""} and buffer (<span style="color:${buf < 0 ? "var(--warn)" : "inherit"}">${money(buf)}</span>).${buf < 0 ? " Lower the savings or fun amount this month to cover it." : ""}`;
 }
@@ -768,16 +767,15 @@ document.addEventListener("click", e => {
   }
   if (act === "save-payday"){
     const v = id => parseAmt(document.getElementById(id).value);
-    const th = v("pd-th"), sv = v("pd-sv") || 0, fn = v("pd-fn") || 0, tr = v("pd-tr") || 0, cc = v("pd-cc") || 0, date = document.getElementById("pd-date").value || todayISO();
+    const th = v("pd-th"), sv = v("pd-sv") || 0, fn = v("pd-fn") || 0, tr = v("pd-tr") || 0, date = document.getElementById("pd-date").value || todayISO();
     if (!(th > 0)) return showErr("pd-err", "Enter your take-home pay.");
-    if (sv + fn + tr + cc > th) return showErr("pd-err", "These amounts add up to more than your pay.");
+    if (sv + fn + tr > th) return showErr("pd-err", "These amounts add up to more than your pay.");
     const t0 = Date.now();
     (async () => {
       await writeTx({ id: uid(), kind: "income", payday: true, for: budgetMonth(), amount: th, to: "current", date, note: "Pay", created: t0 });
       if (sv) await writeTx({ id: uid(), kind: "move", amount: sv, from: "current", to: "savings", date, note: "Payday savings", created: t0+1 });
       if (fn) await writeTx({ id: uid(), kind: "move", amount: fn, from: "current", to: "fun", date, note: "Payday fun money", created: t0+2 });
       if (tr) await writeTx({ id: uid(), kind: "move", amount: tr, from: "current", to: "train", date, note: "Payday train pot", created: t0+3 });
-      if (cc) await writeTx({ id: uid(), kind: "spend", amount: cc, cat: "oneoff", from: "current", date, note: "Card bill", created: t0+4 });
     })();
     closeSheet(); toast("Payday done. "+money(sv)+" saved."); return;
   }
